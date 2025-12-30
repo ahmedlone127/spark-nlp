@@ -10,11 +10,11 @@ on:
 
 jobs:
   slow-tests-spark34:
-    runs-on: macos-15-intel 
-    continue-on-error: true  
+    runs-on: macos-15-intel  # Use Intel for OpenVINO compatibility
+    continue-on-error: true  # Don't fail entire workflow on test failures
     env:
       TF_CPP_MIN_LOG_LEVEL: 3
-      JAVA_OPTS: "-Xmx8192m -XX:+UseG1GC" 
+      JAVA_OPTS: "-Xmx8192m -XX:+UseG1GC"  # Increase to 8GB
     name: Slow Tests on Apache Spark 3.4.x
 
     steps:
@@ -38,7 +38,7 @@ jobs:
       - name: Build Spark NLP
         run: |
           brew install sbt
-          sbt -mem 8192 -Dis_spark34=true clean assemblyAndCopy 
+          sbt -mem 8192 -Dis_spark34=true clean assemblyAndCopy  # Increase to 8GB
       - name: Run Slow Python Tests with Memory Isolation
         run: |
           cd python
