@@ -10,7 +10,7 @@ on:
 
 jobs:
   slow-tests-spark34:
-    runs-on: macos-13
+    runs-on: macos-15-intel
     env:
       TF_CPP_MIN_LOG_LEVEL: 3
       JAVA_OPTS: "-Xmx4096m -XX:+UseG1GC"
