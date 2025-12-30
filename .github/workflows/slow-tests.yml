@@ -12,15 +12,10 @@ jobs:
   slow-tests-spark34:
     runs-on: macos-15-intel
     continue-on-error: true
-    strategy:
-      matrix:
-        # Split 100+ tests into 4 batches - each batch runs completely separately
-        batch: [1, 2, 3, 4]
-      fail-fast: false  # Let all batches complete even if one fails
     env:
       TF_CPP_MIN_LOG_LEVEL: 3
       JAVA_OPTS: "-Xmx6144m -XX:+UseG1GC"
-    name: Slow Tests Batch ${{ matrix.batch }}/4 on Spark 3.4.x
+    name: Slow Tests on Apache Spark 3.4.x
 
     steps:
       - uses: actions/checkout@v3
@@ -36,23 +31,52 @@ jobs:
       - name: Install OpenVINO Dependencies (oneTBB)
         run: |
           brew install tbb
-          # Set library path so OpenVINO can find TBB
           echo "DYLD_LIBRARY_PATH=$(brew --prefix tbb)/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
       - name: Install Python packages
         run: |
           python -m pip install --upgrade pip
-          pip install pyspark==3.4.0 numpy pytest pytest-isolate pytest-split
+          pip install pyspark==3.4.0 numpy pytest
       - name: Build Spark NLP
         run: |
           brew install sbt
           sbt -mem 6144 -Dis_spark34=true clean assemblyAndCopy
-      - name: Run Slow Python Tests - Batch ${{ matrix.batch }}
+      - name: Run Slow Python Tests File-by-File
         run: |
           cd python
-          # pytest-split automatically divides tests into N groups
-          python3.8 -m pytest -v -m slow \
-            --isolate \
-            --isolate-mem-limit=4294967296 \
-            --isolate-timeout=6000 \
-            --splits=4 \
-            --group=${{ matrix.batch }}
+          # Get all test files with slow tests
+          TEST_FILES=$(python3.8 -m pytest --collect-only -m slow -q | grep "::" | cut -d':' -f1 | sort -u)
+          
+          TOTAL=$(echo "$TEST_FILES" | wc -l | tr -d ' ')
+          CURRENT=0
+          FAILED=0
+          
+          echo "Found $TOTAL test files to run"
+          
+          for test_file in $TEST_FILES; do
+            CURRENT=$((CURRENT + 1))
+            echo ""
+            echo "=========================================="
+            echo "[$CURRENT/$TOTAL] Running: $test_file"
+            echo "=========================================="
+            
+            # Run each file in its own process
+            if python3.8 -m pytest -v -m slow "$test_file"; then
+              echo "✓ PASSED: $test_file"
+            else
+              echo "✗ FAILED: $test_file"
+              FAILED=$((FAILED + 1))
+            fi
+            
+            # Small delay for cleanup
+            sleep 3
+          done
+          
+          echo ""
+          echo "=========================================="
+          echo "Summary: $FAILED/$TOTAL test files failed"
+          echo "=========================================="
+          
+          # Exit with error if any tests failed
+          if [ $FAILED -gt 0 ]; then
+            exit 1
+          fi
