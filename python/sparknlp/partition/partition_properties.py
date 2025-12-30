@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """Contains classes for partition properties used in reading various document types."""
-from typing import Dict
+from typing import Dict, List
 from pyspark.ml.param import Param, Params, TypeConverters
 
 
@@ -625,7 +625,7 @@ class HasTextReaderProperties(Params):
         typeConverter=TypeConverters.toListString
     )
 
-    def setExtractTagAttributes(self, attributes: list[str]):
+    def setExtractTagAttributes(self, attributes: List[str]):
         """
         Specify which tag attributes should have their values extracted as text when parsing
         tag-based formats (e.g., HTML or XML).
