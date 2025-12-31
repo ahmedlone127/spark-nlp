@@ -77,7 +77,7 @@ jobs:
             
             # Show disk usage
             echo "Disk usage after cleanup:"
-            df -h / | tail -1
+            df -h / | tail -1  
             
             # Small delay for cleanup
             sleep 3
