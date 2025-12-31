@@ -27,7 +27,7 @@ jobs:
       - name: Install OpenVINO Dependencies (oneTBB)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libtbb2 libtbb-dev libgomp1
+          sudo apt-get install -y libtbb-dev libtbbmalloc2 libgomp1
       - name: Install Python packages
         run: |
           python -m pip install --upgrade pip
