@@ -42,6 +42,23 @@ jobs:
       - name: Build Spark NLP
         run: |
           sbt -mem 6144 -Dis_spark34=true clean assemblyAndCopy
+      
+      - name: Check Initial Disk Space
+        run: |
+          echo "Initial disk usage:"
+          df -h /
+          echo ""
+          echo "Home directory size:"
+          du -sh ~ 2>/dev/null || true
+      
+      - name: Clean Existing Caches
+        run: |
+          echo "Cleaning any existing caches..."
+          rm -rf ~/.cache_pretrained 2>/dev/null || true
+          rm -rf ~/cache_pretrained 2>/dev/null || true
+          rm -rf python/.pytest_cache 2>/dev/null || true
+          echo "Cache cleanup complete"
+      
       - name: Run Slow Python Tests File-by-File
         run: |
           cd python
@@ -69,17 +86,48 @@ jobs:
               FAILED=$((FAILED + 1))
             fi
             
-            # Clean up Spark NLP cache and pytest cache after each test
+            # AGGRESSIVE cleanup of all Spark NLP caches
             echo "Cleaning up caches..."
+            
+            # Remove all common Spark NLP cache locations
             rm -rf ~/.cache_pretrained 2>/dev/null || true
             rm -rf ~/cache_pretrained 2>/dev/null || true
+            rm -rf /tmp/cache_pretrained 2>/dev/null || true
+            rm -rf /home/runner/.cache_pretrained 2>/dev/null || true
+            rm -rf /home/runner/cache_pretrained 2>/dev/null || true
+            
+            # Remove Spark temporary files
+            rm -rf /tmp/spark-* 2>/dev/null || true
+            rm -rf /tmp/blockmgr-* 2>/dev/null || true
+            rm -rf /tmp/hadoop-* 2>/dev/null || true
+            
+            # Remove pytest cache
             rm -rf .pytest_cache 2>/dev/null || true
+            
+            # Find and remove any large cache directories
+            find ~ -name "cache_pretrained" -type d -exec rm -rf {} + 2>/dev/null || true
+            find /tmp -name "spark-*" -type d -mmin +5 -exec rm -rf {} + 2>/dev/null || true
             
             # Show disk usage
             echo "Disk usage after cleanup:"
-            df -h / | tail -1  
+            df -h / | tail -1
             
-            # Small delay for cleanup
+            # If disk is >90% full, do emergency cleanup
+            DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
+            if [ "$DISK_USAGE" -gt 90 ]; then
+              echo "⚠️  WARNING: Disk usage at ${DISK_USAGE}% - performing emergency cleanup"
+              # Clean Docker images and containers
+              docker system prune -af 2>/dev/null || true
+              # Clean apt cache
+              sudo apt-get clean 2>/dev/null || true
+              sudo rm -rf /var/lib/apt/lists/* 2>/dev/null || true
+              # Clean pip cache
+              pip cache purge 2>/dev/null || true
+              echo "After emergency cleanup:"
+              df -h / | tail -1
+            fi
+            
+            # Small delay for filesystem sync
             sleep 3
           done
           
