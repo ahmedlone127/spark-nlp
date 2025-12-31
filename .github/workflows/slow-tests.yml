@@ -31,7 +31,12 @@ jobs:
       - name: Install OpenVINO Dependencies (oneTBB)
         run: |
           brew install tbb
-          echo "DYLD_LIBRARY_PATH=$(brew --prefix tbb)/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          # Set library paths for OpenVINO
+          TBB_LIB_PATH=$(brew --prefix tbb)/lib
+          echo "DYLD_LIBRARY_PATH=$TBB_LIB_PATH:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "DYLD_FALLBACK_LIBRARY_PATH=$TBB_LIB_PATH" >> $GITHUB_ENV
+          # Also set Java library path for Spark
+          echo "SPARK_SUBMIT_OPTS=--driver-java-options=-Djava.library.path=$TBB_LIB_PATH" >> $GITHUB_ENV
       - name: Install Python packages
         run: |
           python -m pip install --upgrade pip
@@ -54,6 +59,8 @@ jobs:
           
           for test_file in $TEST_FILES; do
             CURRENT=$((CURRENT + 1))
+            
+            
             echo ""
             echo "=========================================="
             echo "[$CURRENT/$TOTAL] Running: $test_file"
@@ -65,6 +72,20 @@ jobs:
             else
               echo "✗ FAILED: $test_file"
               FAILED=$((FAILED + 1))
+              
+              # Clean up cache_pretrained on failure to avoid corruption issues
+              if [ -d "$HOME/cache_pretrained" ]; then
+                echo "Cleaning up cache_pretrained after failure..."
+                rm -rf "$HOME/cache_pretrained"
+              fi
+            fi
+            
+            # Clean up cache_pretrained periodically (every 10 tests) to prevent disk space issues
+            if [ $((CURRENT % 2)) -eq 0 ]; then
+              echo "Periodic cleanup of cache_pretrained..."
+              if [ -d "$HOME/cache_pretrained" ]; then
+                rm -rf "$HOME/cache_pretrained"
+              fi
             fi
             
             # Small delay for cleanup
@@ -73,10 +94,13 @@ jobs:
           
           echo ""
           echo "=========================================="
-          echo "Summary: $FAILED/$TOTAL test files failed"
+          echo "Summary:"
+          echo "  Total: $TOTAL files"
+          echo "  Failed: $FAILED files"
+          echo "  Passed: $((TOTAL - FAILED - SKIPPED)) files"
           echo "=========================================="
           
-          # Exit with error if any tests failed
+          # Exit with error if any tests failed (not counting skipped)
           if [ $FAILED -gt 0 ]; then
             exit 1
           fi
