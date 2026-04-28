@@ -20,7 +20,7 @@ import com.johnsnowlabs.nlp.annotators.Tokenizer
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.training.CoNLL
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.LocalTest
 import com.johnsnowlabs.util.Benchmark
 
 import org.apache.spark.ml.{Pipeline, PipelineModel}
@@ -31,7 +31,33 @@ class DistilBertForTokenClassificationTestSpec extends AnyFlatSpec {
 
   import ResourceHelper.spark.implicits._
 
-  "DistilBertForTokenClassification" should "correctly load custom model with extracted signatures" taggedAs SlowTest in {
+  "DistilBertForTokenClassification" should "correctly load custom model with extracted signatures" taggedAs LocalTest in {
+
+    val ddd = Seq(
+      "John Lenon was born in London and lived in Paris. My name is Sarah and I live in London")
+      .toDF("text")
+
+    val document = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val tokenizer = new Tokenizer()
+      .setInputCols(Array("document"))
+      .setOutputCol("token")
+
+    val tokenClassifier = DistilBertForTokenClassification
+      .pretrained()
+      .setInputCols(Array("token", "document"))
+      .setOutputCol("label")
+      .setCaseSensitive(true)
+
+    val pipeline = new Pipeline().setStages(Array(document, tokenizer, tokenClassifier))
+
+    pipeline.fit(ddd).transform(ddd).show()
+
+  }
+
+  "DistilBertForTokenClassification" should "correctly load custom model with extracted signatures" taggedAs LocalTest in {
 
     val ddd = Seq(
       "John Lenon was born in London and lived in Paris. My name is Sarah and I live in London",
@@ -75,7 +101,7 @@ class DistilBertForTokenClassificationTestSpec extends AnyFlatSpec {
 
   }
 
-  "DistilBertForTokenClassification" should "be saved and loaded correctly" taggedAs SlowTest in {
+  "DistilBertForTokenClassification" should "be saved and loaded correctly" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -126,7 +152,7 @@ class DistilBertForTokenClassificationTestSpec extends AnyFlatSpec {
 
   }
 
-  "DistilBertForTokenClassification" should "benchmark test" taggedAs SlowTest in {
+  "DistilBertForTokenClassification" should "benchmark test" taggedAs LocalTest in {
 
     val conll = CoNLL()
     val training_data =

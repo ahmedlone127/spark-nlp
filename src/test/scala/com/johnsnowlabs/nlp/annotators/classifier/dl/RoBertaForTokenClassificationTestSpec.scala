@@ -20,9 +20,8 @@ import com.johnsnowlabs.nlp.annotators.Tokenizer
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.training.CoNLL
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.Benchmark
-
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.functions.{col, explode, size}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -31,7 +30,32 @@ class RoBertaForTokenClassificationTestSpec extends AnyFlatSpec {
 
   import ResourceHelper.spark.implicits._
 
-  "RoBertaForTokenClassification" should "correctly load custom model with extracted signatures" taggedAs SlowTest in {
+  "RoBertaForTokenClassification" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    val ddd = Seq(
+      "John Lenon was born in London and lived in Paris. My name is Sarah and I live in London")
+      .toDF("text")
+
+    val document = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val tokenizer = new Tokenizer()
+      .setInputCols(Array("document"))
+      .setOutputCol("token")
+
+    val tokenClassifier = RoBertaForTokenClassification
+      .pretrained()
+      .setInputCols(Array("token", "document"))
+      .setOutputCol("label")
+      .setCaseSensitive(true)
+
+    val pipeline = new Pipeline().setStages(Array(document, tokenizer, tokenClassifier))
+
+    pipeline.fit(ddd).transform(ddd).show()
+  }
+
+  "RoBertaForTokenClassification" should "correctly load custom model with extracted signatures" taggedAs LocalTest in {
 
     val ddd = Seq(
       "John Lenon was born in London and lived in Paris. My name is Sarah and I live in London",
@@ -75,7 +99,7 @@ class RoBertaForTokenClassificationTestSpec extends AnyFlatSpec {
 
   }
 
-  "RoBertaForTokenClassification" should "be saved and loaded correctly" taggedAs SlowTest in {
+  "RoBertaForTokenClassification" should "be saved and loaded correctly" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -126,7 +150,7 @@ class RoBertaForTokenClassificationTestSpec extends AnyFlatSpec {
 
   }
 
-  "RoBertaForTokenClassification" should "benchmark test" taggedAs SlowTest in {
+  "RoBertaForTokenClassification" should "benchmark test" taggedAs LocalTest in {
 
     val conll = CoNLL()
     val training_data =

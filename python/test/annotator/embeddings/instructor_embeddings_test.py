@@ -22,7 +22,7 @@ from test.annotator.common.has_max_sentence_length_test import HasMaxSentenceLen
 from test.util import SparkContextForTest
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class InstructorEmbeddingsTestSpec(unittest.TestCase):
     def setUp(self):
         self.spark = SparkContextForTest.spark
@@ -50,8 +50,27 @@ class InstructorEmbeddingsTestSpec(unittest.TestCase):
 
         results.select("instructor.embeddings").show(truncate=False)
 
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        data = self.spark.createDataFrame([
+            [1, """Capitalism has been dominant in the Western world since the end of feudalism, but most feel[who?] that 
+            the term "mixed economies" more precisely describes most contemporary economies, due to their containing both 
+            private-owned and state-owned enterprises. In capitalism, prices determine the demand-supply scale. For 
+            example, higher demand for certain goods and services lead to higher prices and lower demand for certain 
+            goods lead to lower prices. """]]).toDF("id", "text")
+
+        document_assembler = DocumentAssembler() \
+            .setInputCol("text") \
+            .setOutputCol("documents")
+
+        instruction = self.tested_annotator
+
+        pipeline = Pipeline().setStages([document_assembler, instruction])
+        pipeline.fit(data).transform(data).show()
+
+
 #
-# @pytest.mark.slow
+# @pytest.mark.local
 # class BertEmbeddingsLoadSavedModelTestSpec(unittest.TestCase):
 #
 #     def setUp(self):

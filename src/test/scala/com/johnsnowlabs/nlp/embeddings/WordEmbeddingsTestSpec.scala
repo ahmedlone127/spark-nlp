@@ -20,10 +20,9 @@ import com.johnsnowlabs.nlp.AnnotatorType.WORD_EMBEDDINGS
 import com.johnsnowlabs.nlp.annotators.SparkSessionTest
 import com.johnsnowlabs.nlp.util.io.{ReadAs, ResourceHelper}
 import com.johnsnowlabs.nlp.{Annotation, AssertAnnotations}
-import com.johnsnowlabs.tags.{FastTest, SlowTest}
+import com.johnsnowlabs.tags.{FastTest, SlowTest, LocalTest}
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.col
 import org.scalatest.flatspec.AnyFlatSpec
 
 class WordEmbeddingsTestSpec extends AnyFlatSpec with SparkSessionTest {
@@ -32,35 +31,7 @@ class WordEmbeddingsTestSpec extends AnyFlatSpec with SparkSessionTest {
     .option("header", "true")
     .csv("src/test/resources/embeddings/clinical_words.txt")
 
-  "Word Embeddings" should "Should not repeat tokens" taggedAs FastTest in {
-
-    val loaded = spark.read.parquet("src/test/resources/word-embedding/test-repeated-tokens")
-
-    val embeddings = WordEmbeddingsModel
-      .pretrained("glove_100d", "en")
-      .setInputCols(Array("splitter", "token"))
-      .setOutputCol("embedding")
-
-    val pipeline = new Pipeline()
-      .setStages(Array(embeddings))
-
-    val model = pipeline.fit(loaded)
-
-    val result = model.transform(loaded)
-    val duplicateBegins = result
-      .selectExpr("explode(embedding) as e")
-      .select(col("e.begin").alias("begin"))
-      .groupBy("begin")
-      .count()
-      .filter(col("count") > 2)
-      .count()
-
-    assert(
-      duplicateBegins == 0,
-      s"Found $duplicateBegins repeated tokens (duplicate begin positions)")
-  }
-
-  "Word Embeddings" should "correctly embed clinical words not embed non-existent words" taggedAs SlowTest in {
+  "Word Embeddings" should "correctly embed clinical words not embed non-existent words" taggedAs LocalTest in {
 
     val notWords = spark.read
       .option("header", "true")

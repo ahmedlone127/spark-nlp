@@ -21,7 +21,7 @@ from sparknlp.base import *
 from test.util import SparkSessionForTest
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class ClassifierDLTestSpec(unittest.TestCase):
     def setUp(self):
         self.data = SparkSessionForTest.spark.read.option("header", "true") \
@@ -56,4 +56,28 @@ class ClassifierDLTestSpec(unittest.TestCase):
             .setOutputCol("class")
 
         print(classsifierdlModel.getClasses())
+
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        document_assembler = DocumentAssembler() \
+            .setInputCol("text") \
+            .setOutputCol("document")
+
+        sentence_embeddings = UniversalSentenceEncoder.pretrained() \
+            .setInputCols("document") \
+            .setOutputCol("sentence_embeddings")
+
+        classifier = ClassifierDLApproach() \
+            .setInputCols("sentence_embeddings") \
+            .setOutputCol("category") \
+            .setLabelColumn("label") \
+            .setRandomSeed(44)
+
+        pipeline = Pipeline(stages=[
+            document_assembler,
+            sentence_embeddings,
+            classifier
+        ])
+
+        pipeline.fit(self.data).transform(self.data).show()
 

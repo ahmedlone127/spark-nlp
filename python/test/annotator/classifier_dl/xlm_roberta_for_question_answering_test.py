@@ -22,7 +22,7 @@ from test.annotator.common.has_max_sentence_length_test import HasMaxSentenceLen
 from test.util import SparkContextForTest
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class XlmRoBertaForQuestionAnsweringTestSpec(unittest.TestCase, HasMaxSentenceLengthTests):
     def setUp(self):
         self.tested_annotator = XlmRoBertaForQuestionAnswering.pretrained() \
@@ -31,6 +31,25 @@ class XlmRoBertaForQuestionAnsweringTestSpec(unittest.TestCase, HasMaxSentenceLe
             .setCaseSensitive(False)
 
     def test_run(self):
+        documentAssembler = MultiDocumentAssembler() \
+            .setInputCols(["question", "context"]) \
+            .setOutputCols(["document_question", "document_context"])
+
+        questionAnswering = self.tested_annotator
+
+        pipeline = Pipeline().setStages([
+            documentAssembler,
+            questionAnswering
+        ])
+
+        data = SparkContextForTest.spark.createDataFrame(
+            [["What's my name?", "My name is Clara and I live in Berkeley."]]).toDF("question",
+                                                                                    "context")
+        result = pipeline.fit(data).transform(data)
+        result.select("answer.result").show(truncate=False)
+
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
         documentAssembler = MultiDocumentAssembler() \
             .setInputCols(["question", "context"]) \
             .setOutputCols(["document_question", "document_context"])

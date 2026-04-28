@@ -19,14 +19,69 @@ package com.johnsnowlabs.nlp.embeddings
 import com.johnsnowlabs.nlp.annotator.SentenceDetectorDLModel
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import org.apache.spark.ml.Pipeline
 import org.scalatest.flatspec.AnyFlatSpec
 import org.apache.spark.sql.functions.{col, size}
 
 class MxbaiEmbeddingsTestSpec extends AnyFlatSpec {
 
-  "Mxbai Embeddings" should "correctly embed multiple sentences" taggedAs SlowTest in {
+  "Mxbai Embeddings" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    import ResourceHelper.spark.implicits._
+
+    val testData = Seq(
+      "This is an example sentence for testing embeddings.",
+      "Each sentence is converted into a numerical representation.",
+      "Machine learning models use these embeddings for various tasks.")
+      .toDF("text")
+
+    val document = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val sentenceDetectorDL = SentenceDetectorDLModel
+      .pretrained("sentence_detector_dl", "en")
+      .setInputCols(Array("document"))
+      .setOutputCol("sentences")
+
+    val embeddings = MxbaiEmbeddings
+      .pretrained()
+      .setInputCols("sentences")
+      .setOutputCol("Mxbai")
+
+    val pipeline = new Pipeline().setStages(Array(document, sentenceDetectorDL, embeddings))
+
+    val pipelineModel = pipeline.fit(testData)
+    val transformed = pipelineModel.transform(testData)
+
+    transformed.select("text", "Mxbai.embeddings").show()
+
+    assert(transformed.columns.contains("Mxbai"), "because pipeline should output Mxbai column")
+
+    val embeddingsDF = transformed.withColumn("embeddings", col("Mxbai.embeddings").getItem(0))
+    val sizesArray: Array[Int] = embeddingsDF
+      .select(size(col("embeddings")).as("size"))
+      .collect()
+      .map(row => row.getAs[Int]("size"))
+
+    assert(
+      sizesArray.forall(_ > 0),
+      s"because all embeddings should have size greater than 0: " +
+        s"\nsmallest size was ${sizesArray.min}")
+
+    assert(
+      sizesArray.forall(_ == sizesArray.head),
+      s"because all embeddings should have the same size: " +
+        s"\nsizes were ${sizesArray.mkString(", ")}")
+
+    assert(
+      transformed.count() === testData.count(),
+      s"because output should have same number of rows as input: " +
+        s"\nresult was ${transformed.count()} \nexpected is: ${testData.count()}")
+  }
+
+  "Mxbai Embeddings" should "correctly embed multiple sentences" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -54,7 +109,7 @@ class MxbaiEmbeddingsTestSpec extends AnyFlatSpec {
       .save("./tmp_forsequence_model")
   }
 
-  it should "have embeddings of the same size" taggedAs SlowTest in {
+  it should "have embeddings of the same size" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
     val testDf = Seq(
       "I like apples",
@@ -85,7 +140,7 @@ class MxbaiEmbeddingsTestSpec extends AnyFlatSpec {
     assert(sizesArray.forall(_ == sizesArray.head))
   }
 
-  it should "work with sentences" taggedAs SlowTest in {
+  it should "work with sentences" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
     val testData = "I really enjoy my job. This is amazing"
     val testDf = Seq(testData).toDF("text")
@@ -112,7 +167,7 @@ class MxbaiEmbeddingsTestSpec extends AnyFlatSpec {
     pipelineDF.select("Mxbai.embeddings").show(false)
   }
 
-  it should "not return empty embeddings" taggedAs SlowTest in {
+  it should "not return empty embeddings" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
     val interests = Seq(
       "I like music",

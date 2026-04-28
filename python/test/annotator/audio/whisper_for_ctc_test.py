@@ -22,7 +22,7 @@ from sparknlp.base import *
 from test.util import SparkSessionForTest
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class WhisperTestSetUp(unittest.TestCase):
     def setUp(self):
         audio_path = os.getcwd() + "/../src/test/resources/audio/json/audio_floats.json"
@@ -34,9 +34,8 @@ class WhisperTestSetUp(unittest.TestCase):
             .setOutputCol("audio_assembler")
 
         # Edit Manually
-        model_path = "exported_onnx/openai/whisper-tiny"
         self.speech_to_text = WhisperForCTC \
-            .loadSavedModel(model_path, SparkSessionForTest.spark) \
+            .pretrained() \
             .setInputCols("audio_assembler") \
             .setOutputCol("text")
 
@@ -45,7 +44,7 @@ class WhisperTestSetUp(unittest.TestCase):
         self.model.write().overwrite().save("./tmp_Whisper_pipeline_model")
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class WhisperForCTCTestSpec(WhisperTestSetUp, unittest.TestCase):
 
     def setUp(self):
@@ -58,8 +57,12 @@ class WhisperForCTCTestSpec(WhisperTestSetUp, unittest.TestCase):
         result_df.select("text.result").show(truncate=False)
         assert result_df.select("text").count() > 0
 
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        self.data.show()
+        self.model.transform(self.data).show()
 
-@pytest.mark.slow
+@pytest.mark.local
 class LightWhisperForCTCOneAudioTestSpec(WhisperTestSetUp, unittest.TestCase):
     def setUp(self):
         super().setUp()
@@ -82,7 +85,7 @@ class LightWhisperForCTCOneAudioTestSpec(WhisperTestSetUp, unittest.TestCase):
             self.assertTrue(len(result["text"]) > 0)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class LightWhisperForCTCTestSpec(WhisperTestSetUp, unittest.TestCase):
     def setUp(self):
         super().setUp()
@@ -106,7 +109,7 @@ class LightWhisperForCTCTestSpec(WhisperTestSetUp, unittest.TestCase):
             self.assertTrue(len(result["text"]) > 0)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class WhisperForCTCLangTaskTestSpec(WhisperTestSetUp, unittest.TestCase):
     def setUp(self):
         super().setUp()

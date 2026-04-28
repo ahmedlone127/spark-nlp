@@ -20,7 +20,7 @@ import com.johnsnowlabs.nlp.annotators.{StopWordsCleaner, Tokenizer}
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.training.CoNLL
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.Benchmark
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.functions.{col, explode, size}
@@ -28,7 +28,41 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class CamemBertEmbeddingsTestSpec extends AnyFlatSpec {
 
-  "CamemBertEmbeddings" should "correctly work with empty tokens" taggedAs SlowTest in {
+  "CamemBertEmbeddings" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    val smallCorpus = ResourceHelper.spark.read
+      .option("header", "true")
+      .csv("src/test/resources/embeddings/sentence_embeddings.csv")
+      .limit(1)
+
+    val documentAssembler = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val tokenizer = new Tokenizer()
+      .setInputCols(Array("document"))
+      .setOutputCol("token")
+
+    val stopWordsCleaner = new StopWordsCleaner()
+      .setInputCols("token")
+      .setOutputCol("cleanTokens")
+      .setStopWords(
+        Array("this", "is", "my", "document", "sentence", "second", "first", ",", "."))
+      .setCaseSensitive(false)
+
+    val embeddings = CamemBertEmbeddings
+      .pretrained()
+      .setInputCols("document", "cleanTokens")
+      .setOutputCol("embeddings")
+      .setCaseSensitive(true)
+
+    val pipeline = new Pipeline()
+      .setStages(Array(documentAssembler, tokenizer, stopWordsCleaner, embeddings))
+
+    pipeline.fit(smallCorpus).transform(smallCorpus).show()
+  }
+
+  "CamemBertEmbeddings" should "correctly work with empty tokens" taggedAs LocalTest in {
 
     val smallCorpus = ResourceHelper.spark.read
       .option("header", "true")
@@ -65,7 +99,7 @@ class CamemBertEmbeddingsTestSpec extends AnyFlatSpec {
     }
   }
 
-  "CamemBertEmbeddings" should "be saved and loaded correctly" taggedAs SlowTest in {
+  "CamemBertEmbeddings" should "be saved and loaded correctly" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -120,7 +154,7 @@ class CamemBertEmbeddingsTestSpec extends AnyFlatSpec {
 
   }
 
-  "CamemBertEmbeddings" should "benchmark test" taggedAs SlowTest in {
+  "CamemBertEmbeddings" should "benchmark test" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
     import ResourceHelper.spark.implicits._
 
@@ -165,7 +199,7 @@ class CamemBertEmbeddingsTestSpec extends AnyFlatSpec {
     assert(totalTokens == totalEmbeddings)
   }
 
-  "CamemBertEmbeddings" should "download, save, and load a model" taggedAs SlowTest in {
+  "CamemBertEmbeddings" should "download, save, and load a model" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -212,7 +246,7 @@ class CamemBertEmbeddingsTestSpec extends AnyFlatSpec {
 
   }
 
-  "CamemBertEmbeddings" should "be aligned with custom tokens from Tokenizer" taggedAs SlowTest in {
+  "CamemBertEmbeddings" should "be aligned with custom tokens from Tokenizer" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 

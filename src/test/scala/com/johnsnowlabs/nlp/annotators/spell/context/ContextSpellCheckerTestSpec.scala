@@ -23,7 +23,7 @@ import com.johnsnowlabs.nlp.annotators.common.{PrefixedToken, SuffixedToken}
 import com.johnsnowlabs.nlp.annotators.sbd.pragmatic.SentenceDetector
 import com.johnsnowlabs.nlp.annotators.spell.context.parser._
 import com.johnsnowlabs.nlp.{Annotation, DocumentAssembler, LightPipeline, SparkAccessor}
-import com.johnsnowlabs.tags.{FastTest, SlowTest}
+import com.johnsnowlabs.tags.{FastTest, LocalTest, SlowTest}
 import org.apache.commons.io.FileUtils
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.DataFrame
@@ -43,8 +43,30 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
   trait distFile extends WeightedLevenshtein {
     val weights: Map[String, Map[String, Float]] = loadWeights("src/test/resources/dist.psv")
   }
+
+  "Spell Checker" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    val data = Seq("This is a correct sentence .", "This is a correct bananas .").toDF("text")
+
+    val documentAssembler =
+      new DocumentAssembler().setInputCol("text").setOutputCol("doc")
+
+    val tokenizer: Tokenizer = new Tokenizer()
+      .setInputCols(Array("doc"))
+      .setOutputCol("token")
+
+    val spellChecker = ContextSpellCheckerModel
+      .pretrained()
+      .setTradeOff(12.0f)
+      .setInputCols("token")
+      .setOutputCol("checked")
+
+    val pipeline =
+      new Pipeline().setStages(Array(documentAssembler, tokenizer, spellChecker)).fit(data)
+    pipeline.transform(data).show()
+  }
   // This test fails in GitHub Actions
-  "Spell Checker" should "provide appropriate scores - sentence level" taggedAs SlowTest in {
+  "Spell Checker" should "provide appropriate scores - sentence level" taggedAs LocalTest in {
 
     def time[R](block: => R): R = {
       val t0 = System.nanoTime()
@@ -88,7 +110,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
     assert(results(0) < results(1))
 
   }
-  "ContextSpellchker" should "return correct order" taggedAs SlowTest in new distFile {
+  "ContextSpellchker" should "return correct order" taggedAs LocalTest in new distFile {
     val data: DataFrame = Seq("It was a cold. The country was white withh snow .").toDF("text")
     val documentAssembler: DocumentAssembler =
       new DocumentAssembler().setInputCol("text").setOutputCol("document")
@@ -121,7 +143,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
   }
 
   // This test fails in GitHub Actions
-  "Special classes" should "serialize/deserialize properly during model save" taggedAs SlowTest in {
+  "Special classes" should "serialize/deserialize properly during model save" taggedAs LocalTest in {
     import SparkAccessor.spark
 
     val specialClasses = Seq(
@@ -155,7 +177,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
     }
   }
 
-  "Special classes" should "serialize/deserialize properly - during execution" taggedAs SlowTest in {
+  "Special classes" should "serialize/deserialize properly - during execution" taggedAs LocalTest in {
 
     val specialClasses = Seq(
       new AgeToken,
@@ -193,12 +215,12 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
     }
   }
 
-  "weighted Levenshtein distance" should "work from file" taggedAs SlowTest in new distFile {
+  "weighted Levenshtein distance" should "work from file" taggedAs LocalTest in new distFile {
     assert(wLevenshteinDist("water", "Water", weights) < 1.0f)
     assert(wLevenshteinDist("50,000", "50,C00", weights) < 1.0f)
   }
 
-  "weighted Levenshtein distance" should "produce weighted results" taggedAs SlowTest in new Scope {
+  "weighted Levenshtein distance" should "produce weighted results" taggedAs LocalTest in new Scope {
     assert(
       wLevenshteinDist("clean", "c1ean", weights) > wLevenshteinDist("clean", "c!ean", weights))
     assert(
@@ -210,7 +232,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
         weights))
   }
 
-  "weighted Levenshtein distance" should "handle insertions and deletions" taggedAs SlowTest in new Scope {
+  "weighted Levenshtein distance" should "handle insertions and deletions" taggedAs LocalTest in new Scope {
     override val weights: Map[String, Map[String, Float]] =
       loadWeights("src/test/resources/distance.psv")
 
@@ -260,7 +282,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
 
   }
 
-  "a Spell Checker" should "work in a pipeline with Tokenizer" taggedAs SlowTest in {
+  "a Spell Checker" should "work in a pipeline with Tokenizer" taggedAs LocalTest in {
     val data = Seq(
       "It was a cold , dreary day and the country was white with smow .",
       "He wos re1uctant to clange .",
@@ -285,7 +307,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
 
   }
 
-  "a Spell Checker" should "work in a light pipeline" taggedAs SlowTest in {
+  "a Spell Checker" should "work in a light pipeline" taggedAs LocalTest in {
     import SparkAccessor.spark
     import spark.implicits._
 
@@ -312,7 +334,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
     lp.annotate(data ++ data ++ data)
   }
 
-  "a Spell Checker" should "correctly handle paragraphs defined by newlines" taggedAs SlowTest in {
+  "a Spell Checker" should "correctly handle paragraphs defined by newlines" taggedAs LocalTest in {
     import SparkAccessor.spark
     import spark.implicits._
 
@@ -341,7 +363,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
 
   }
 
-  "a Spell Checker" should "correctly handle multiple sentences" taggedAs SlowTest in {
+  "a Spell Checker" should "correctly handle multiple sentences" taggedAs LocalTest in {
 
     import SparkAccessor.spark
     import spark.implicits._
@@ -381,7 +403,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
     assert(secondSent.contains("swept"))
   }
 
-  "a model" should "correctly update word classes" taggedAs SlowTest in {
+  "a model" should "correctly update word classes" taggedAs LocalTest in {
 
     import SparkAccessor.spark
     import spark.implicits._
@@ -419,7 +441,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
 
   }
 
-  "a model" should "serialize properly" taggedAs SlowTest in {
+  "a model" should "serialize properly" taggedAs LocalTest in {
 
     val ocrSpellModel = ContextSpellCheckerModel.pretrained()
     assert(
@@ -488,7 +510,7 @@ class ContextSpellCheckerTestSpec extends AnyFlatSpec {
     assert(tmp.equals("( 08/10/1982 )"))
   }
 
-  "when using ContextSpellchecker" should "Adding Multiple values for updateVocabClass when append=true should not crash" taggedAs SlowTest in {
+  "when using ContextSpellchecker" should "Adding Multiple values for updateVocabClass when append=true should not crash" taggedAs LocalTest in {
 
     import SparkAccessor.spark
     import spark.implicits._

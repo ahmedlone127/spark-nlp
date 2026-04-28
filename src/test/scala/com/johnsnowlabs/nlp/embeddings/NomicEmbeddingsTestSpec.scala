@@ -19,14 +19,44 @@ package com.johnsnowlabs.nlp.embeddings
 import com.johnsnowlabs.nlp.annotators.sentence_detector_dl.SentenceDetectorDLModel
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.functions.{col, size}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class NomicEmbeddingsTestSpec extends AnyFlatSpec {
 
-  "Nomic Embeddings" should "correctly embed multiple sentences" taggedAs SlowTest in {
+  "Nomic Embeddings" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    import ResourceHelper.spark.implicits._
+
+    val ddd = Seq(
+      "query: how much protein should a female eat",
+      "query: summit define",
+      "passage: As a general guideline, the CDC's average requirement of protein for women ages 19 to 70 is 46 " +
+        "grams per day. But, as you can see from this chart, you'll need to increase that if you're expecting or" +
+        " training for a marathon. Check out the chart below to see how much protein you should be eating each day.",
+      "passage: Definition of summit for English Language Learners. : 1  the highest point of a mountain : the top of" +
+        " a mountain. : 2  the highest level. : 3  a meeting or series of meetings between the leaders of two or more" +
+        " governments.")
+      .toDF("text")
+
+    val document = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val embeddings = NomicEmbeddings
+      .pretrained()
+      .setInputCols(Array("document"))
+      .setOutputCol("nomic")
+
+    val pipeline = new Pipeline().setStages(Array(document, embeddings))
+
+    pipeline.fit(ddd).transform(ddd).show()
+
+  }
+
+  "Nomic Embeddings" should "correctly embed multiple sentences" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -57,7 +87,7 @@ class NomicEmbeddingsTestSpec extends AnyFlatSpec {
 
   }
 
-  it should "have embeddings of the same size" taggedAs SlowTest in {
+  it should "have embeddings of the same size" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
     val testDf = Seq(
       "I like apples",
@@ -88,7 +118,7 @@ class NomicEmbeddingsTestSpec extends AnyFlatSpec {
     assert(sizesArray.forall(_ == sizesArray.head))
   }
 
-  it should "work with sentences" taggedAs SlowTest in {
+  it should "work with sentences" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
     val testData = "I really enjoy my job. This is amazing"
     val testDf = Seq(testData).toDF("text")
@@ -113,7 +143,7 @@ class NomicEmbeddingsTestSpec extends AnyFlatSpec {
     pipelineDF.select("nomic.embeddings").show(false)
   }
 
-  it should "not return empty embeddings" taggedAs SlowTest in {
+  it should "not return empty embeddings" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
     val interests = Seq(
       "I like music",

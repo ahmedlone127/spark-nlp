@@ -4,7 +4,7 @@ import com.johnsnowlabs.nlp.Annotation
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.finisher.GGUFRankingFinisher
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.TestUtils.measureRAMChange
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
@@ -56,13 +56,18 @@ class AutoGGUFRerankerTest extends AnyFlatSpec {
       })
   }
 
-  it should "create batch completions" taggedAs SlowTest in {
+  it should "run end to end pipeline test" taggedAs SlowTest in {
+    val pipeline = new Pipeline().setStages(Array(documentAssembler, model))
+    pipeline.fit(data).transform(data).show()
+  }
+
+  it should "create batch completions" taggedAs LocalTest in {
     val pipeline = new Pipeline().setStages(Array(documentAssembler, model))
     val result = pipeline.fit(data).transform(data)
     assertAnnotationsNonEmpty(result)
   }
 
-  it should "be serializable" taggedAs SlowTest in {
+  it should "be serializable" taggedAs LocalTest in {
     lazy val data: Dataset[Row] = Seq(
       "A man is eating food.",
       "A man is eating a piece of bread.",
@@ -101,7 +106,7 @@ class AutoGGUFRerankerTest extends AnyFlatSpec {
     assert(metadataMap.nonEmpty)
   }
 
-  it should "be able to also load pretrained AutoGGUFReranker" taggedAs SlowTest in {
+  it should "be able to also load pretrained AutoGGUFReranker" taggedAs LocalTest in {
     val model = AutoGGUFReranker
       .pretrained()
       .setInputCols("document")
@@ -114,7 +119,7 @@ class AutoGGUFRerankerTest extends AnyFlatSpec {
 
     result.show()
   }
-  it should "throw an error if the query is not set" taggedAs SlowTest in {
+  it should "throw an error if the query is not set" taggedAs LocalTest in {
     val model: AutoGGUFReranker = AutoGGUFReranker
       .loadSavedModel(modelPath, ResourceHelper.spark)
       .setInputCols("document")
@@ -127,7 +132,7 @@ class AutoGGUFRerankerTest extends AnyFlatSpec {
     }
   }
 
-  it should "be able to finisher the reranked documents" taggedAs SlowTest in {
+  it should "be able to finisher the reranked documents" taggedAs LocalTest in {
     model.setQuery(query)
     val pipeline = new Pipeline().setStages(Array(documentAssembler, model, finisher))
     val result = pipeline.fit(data).transform(data)
@@ -136,13 +141,13 @@ class AutoGGUFRerankerTest extends AnyFlatSpec {
     result.select("ranked_documents").show(truncate = false)
   }
 
-  it should "load models with deprecated parameters" taggedAs SlowTest in {
+  it should "load models with deprecated parameters" taggedAs LocalTest in {
     // testing only, should be able to load
     AutoGGUFReranker.pretrained("Nomic_Embed_Text_v1.5.Q8_0.gguf")
   }
 
   // This test requires cpu
-  it should "be closeable" taggedAs SlowTest ignore {
+  it should "be closeable" taggedAs LocalTest ignore {
     // TODO: This needs investigation on llama.cpp side
     val model: AutoGGUFReranker = AutoGGUFReranker
       .pretrained()

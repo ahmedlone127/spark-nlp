@@ -21,7 +21,7 @@ import com.johnsnowlabs.nlp.annotator.Tokenizer
 import com.johnsnowlabs.nlp.base.LightPipeline
 import com.johnsnowlabs.nlp.pretrained.PretrainedPipeline
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.Benchmark
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
@@ -46,7 +46,7 @@ class Wav2Vec2ForCTCTestSpec extends AnyFlatSpec {
 
   processedAudioFloats.printSchema()
 
-  "Wav2Vec2ForCTC" should "correctly transform speech to text from already processed audio files" taggedAs SlowTest in {
+  "Wav2Vec2ForCTC" should "correctly transform speech to text from already processed audio files" taggedAs LocalTest in {
 
     val speechToText: Wav2Vec2ForCTC = Wav2Vec2ForCTC
       .pretrained()
@@ -75,7 +75,30 @@ class Wav2Vec2ForCTCTestSpec extends AnyFlatSpec {
 
   }
 
-  "Wav2Vec2ForCTC" should "correctly work with Tokenizer" taggedAs SlowTest in {
+  "Wav2Vec2ForCTC" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    val speechToText: Wav2Vec2ForCTC = Wav2Vec2ForCTC
+      .pretrained()
+      .setInputCols("audio_assembler")
+      .setOutputCol("text")
+
+    val pipeline: Pipeline = new Pipeline().setStages(Array(audioAssembler, speechToText))
+
+    val bufferedSource =
+      scala.io.Source.fromFile(pathToFileWithFloats)
+
+    val rawFloats = bufferedSource
+      .getLines()
+      .map(_.split(",").head.trim.toFloat)
+      .toArray
+    bufferedSource.close
+
+    val processedAudioFloats = Seq(rawFloats).toDF("audio_content")
+    pipeline.fit(processedAudioFloats).transform(processedAudioFloats).show()
+
+  }
+
+  "Wav2Vec2ForCTC" should "correctly work with Tokenizer" taggedAs LocalTest in {
 
     val speechToText: Wav2Vec2ForCTC = Wav2Vec2ForCTC
       .pretrained()
@@ -108,7 +131,7 @@ class Wav2Vec2ForCTCTestSpec extends AnyFlatSpec {
 
   }
 
-  "Wav2Vec2ForCTC" should "transform speech to text with LightPipeline" taggedAs SlowTest in {
+  "Wav2Vec2ForCTC" should "transform speech to text with LightPipeline" taggedAs LocalTest in {
     val speechToText: Wav2Vec2ForCTC = Wav2Vec2ForCTC
       .pretrained()
       .setInputCols("audio_assembler")
@@ -141,7 +164,7 @@ class Wav2Vec2ForCTCTestSpec extends AnyFlatSpec {
     assert(result("token").nonEmpty)
   }
 
-  it should "transform several speeches to text with LightPipeline" taggedAs SlowTest in {
+  it should "transform several speeches to text with LightPipeline" taggedAs LocalTest in {
     val speechToText: Wav2Vec2ForCTC = Wav2Vec2ForCTC
       .pretrained()
       .setInputCols("audio_assembler")
@@ -178,7 +201,7 @@ class Wav2Vec2ForCTCTestSpec extends AnyFlatSpec {
 
   }
 
-  "Wav2Vec2ForCTC" should "be serializable" taggedAs SlowTest in {
+  "Wav2Vec2ForCTC" should "be serializable" taggedAs LocalTest in {
 
     val speechToText: Wav2Vec2ForCTC = Wav2Vec2ForCTC
       .pretrained()
@@ -205,7 +228,7 @@ class Wav2Vec2ForCTCTestSpec extends AnyFlatSpec {
 
   }
 
-  "Wav2Vec2ForCTC" should "benchmark" taggedAs SlowTest in {
+  "Wav2Vec2ForCTC" should "benchmark" taggedAs LocalTest in {
 
     val speechToText: Wav2Vec2ForCTC = Wav2Vec2ForCTC
       .pretrained()
@@ -232,7 +255,7 @@ class Wav2Vec2ForCTCTestSpec extends AnyFlatSpec {
     })
   }
 
-  "Wav2Vec2ForCTC" should "pretrained pipeline" taggedAs SlowTest in {
+  "Wav2Vec2ForCTC" should "pretrained pipeline" taggedAs LocalTest in {
 
     val processedAudioDoubles: Dataset[Row] =
       spark.read

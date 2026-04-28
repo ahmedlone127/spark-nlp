@@ -22,7 +22,7 @@ from test.annotator.common.has_max_sentence_length_test import HasMaxSentenceLen
 from test.util import SparkContextForTest
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class LongformerForTokenClassificationTestSpec(unittest.TestCase, HasMaxSentenceLengthTests):
     valid_max_length = 4096
 
@@ -51,4 +51,23 @@ class LongformerForTokenClassificationTestSpec(unittest.TestCase, HasMaxSentence
 
         model = pipeline.fit(self.data)
         model.transform(self.data).show()
+
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        document_assembler = DocumentAssembler() \
+            .setInputCol("text") \
+            .setOutputCol("document")
+
+        tokenizer = Tokenizer().setInputCols("document").setOutputCol("token")
+
+        token_classifier = self.tested_annotator
+
+        pipeline = Pipeline(stages=[
+            document_assembler,
+            tokenizer,
+            token_classifier
+        ])
+
+        pipeline.fit(self.data).transform(self.data).show()
+
 

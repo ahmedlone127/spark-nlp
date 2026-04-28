@@ -47,7 +47,7 @@ class Phi3VisionTestSetup(unittest.TestCase):
 
         self.model = self.pipeline.fit(self.test_df)
 
-@pytest.mark.slow
+@pytest.mark.local
 class Phi3VisionTest(Phi3VisionTestSetup, unittest.TestCase):
 
     def setUp(self):
@@ -59,8 +59,13 @@ class Phi3VisionTest(Phi3VisionTestSetup, unittest.TestCase):
         for row in result:
             self.assertTrue(row["answer"] != "")
 
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        self.model.transform(self.test_df).show()
 
-@pytest.mark.slow
+
+
+@pytest.mark.local
 class LightPhi3VisionTest(Phi3VisionTestSetup, unittest.TestCase):
 
     def setUp(self):

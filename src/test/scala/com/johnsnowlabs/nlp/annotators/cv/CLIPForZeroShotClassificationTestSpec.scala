@@ -3,7 +3,7 @@ package com.johnsnowlabs.nlp.annotators.cv
 import com.johnsnowlabs.nlp.base.LightPipeline
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
 import com.johnsnowlabs.nlp.{Annotation, AnnotationImage, IAnnotation, ImageAssembler}
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.DataFrame
 import org.scalatest.flatspec.AnyFlatSpec
@@ -64,13 +64,18 @@ class CLIPForZeroShotClassificationTestSpec extends AnyFlatSpec {
     }
   }
 
-  it should "predict gold standards" taggedAs SlowTest in {
+  it should "run end to end pipeline test" taggedAs SlowTest in {
+    pipeline.fit(imageDF).transform(imageDF).show()
+
+  }
+
+  it should "predict gold standards" taggedAs LocalTest in {
     val results = pipeline.fit(imageDF).transform(imageDF)
 
     assertResult(results)
   }
 
-  it should "be compatible with LightPipeline" taggedAs SlowTest in {
+  it should "be compatible with LightPipeline" taggedAs LocalTest in {
     val pipelineModel = pipeline.fit(imageDF)
     val lightPipeline = new LightPipeline(pipelineModel)
     val images = expected.keys.map(imageFolder + _).toArray
@@ -85,7 +90,7 @@ class CLIPForZeroShotClassificationTestSpec extends AnyFlatSpec {
     }
   }
 
-  it should "be serializable" taggedAs SlowTest in {
+  it should "be serializable" taggedAs LocalTest in {
     val pipelineModel = pipeline.fit(imageDF)
     pipelineModel.stages.last
       .asInstanceOf[CLIPForZeroShotClassification]

@@ -22,7 +22,7 @@ from sparknlp.base import *
 from test.util import SparkSessionForTest
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class HubertTestSetUp(unittest.TestCase):
 
     def setUp(self):
@@ -44,7 +44,7 @@ class HubertTestSetUp(unittest.TestCase):
         self.model.write().overwrite().save("./tmp_hubert_pipeline_model")
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class HubertForCTCTestSpec(HubertTestSetUp, unittest.TestCase):
 
     def setUp(self):
@@ -56,8 +56,13 @@ class HubertForCTCTestSpec(HubertTestSetUp, unittest.TestCase):
         result_df = self.model.transform(self.data)
         assert result_df.select("text").count() > 0
 
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        self.model.transform(self.data).show()
 
-@pytest.mark.slow
+
+
+@pytest.mark.local
 class LightHubertForCTCOneAudioTestSpec(HubertTestSetUp, unittest.TestCase):
     def setUp(self):
         super().setUp()
@@ -80,7 +85,7 @@ class LightHubertForCTCOneAudioTestSpec(HubertTestSetUp, unittest.TestCase):
             self.assertTrue(len(result["text"]) > 0)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class LightHubertForCTCTestSpec(HubertTestSetUp, unittest.TestCase):
     def setUp(self):
         super().setUp()

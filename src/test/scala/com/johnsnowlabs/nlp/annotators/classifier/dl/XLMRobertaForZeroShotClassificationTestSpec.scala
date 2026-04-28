@@ -20,7 +20,7 @@ import com.johnsnowlabs.nlp.annotators.Tokenizer
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.training.CoNLL
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.Benchmark
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.functions.{col, explode, size}
@@ -33,7 +33,37 @@ class XlmRoBertaForZeroShotClassificationTestSpec extends AnyFlatSpec {
   val candidateLabels =
     Array("urgent", "mobile", "travel", "movie", "music", "sport", "weather", "technology")
 
-  "XlmRoBertaForZeroShotClassification" should "correctly load custom model with extracted signatures" taggedAs SlowTest in {
+  "XlmRoBertaForZeroShotClassification" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    val ddd = Seq(
+      "I have a problem with my iphone that needs to be resolved asap!!",
+      "Last week I upgraded my iOS version and ever since then my phone has been overheating whenever I use your app.",
+      "I have a phone and I love it!")
+      .toDF("text")
+
+    val document = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val tokenizer = new Tokenizer()
+      .setInputCols(Array("document"))
+      .setOutputCol("token")
+
+    val tokenClassifier = XlmRoBertaForZeroShotClassification
+      .pretrained()
+      .setInputCols(Array("token", "document"))
+      .setOutputCol("multi_class")
+      .setCaseSensitive(true)
+      .setCoalesceSentences(true)
+      .setCandidateLabels(candidateLabels)
+
+    val pipeline = new Pipeline().setStages(Array(document, tokenizer, tokenClassifier))
+
+    pipeline.fit(ddd).transform(ddd).show()
+
+  }
+
+  "XlmRoBertaForZeroShotClassification" should "correctly load custom model with extracted signatures" taggedAs LocalTest in {
 
     val ddd = Seq(
       "I have a problem with my iphone that needs to be resolved asap!!",
@@ -84,7 +114,7 @@ class XlmRoBertaForZeroShotClassificationTestSpec extends AnyFlatSpec {
     assert(totalDocs == totalLabels)
   }
 
-  "XlmRoBertaForZeroShotClassification" should "be saved and loaded correctly" taggedAs SlowTest in {
+  "XlmRoBertaForZeroShotClassification" should "be saved and loaded correctly" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -139,7 +169,7 @@ class XlmRoBertaForZeroShotClassificationTestSpec extends AnyFlatSpec {
 
   }
 
-  "XlmRoBertaForZeroShotClassification" should "benchmark test" taggedAs SlowTest in {
+  "XlmRoBertaForZeroShotClassification" should "benchmark test" taggedAs LocalTest in {
 
     val conll = CoNLL(explodeSentences = false)
     val training_data =

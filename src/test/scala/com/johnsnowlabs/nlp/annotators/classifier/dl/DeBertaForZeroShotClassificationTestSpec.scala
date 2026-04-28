@@ -20,7 +20,7 @@ import com.johnsnowlabs.nlp.annotators.Tokenizer
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.training.CoNLL
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.Benchmark
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.functions.{col, explode, size}
@@ -33,7 +33,33 @@ class DeBertaForZeroShotClassificationTestSpec extends AnyFlatSpec {
   val candidateLabels =
     Array("urgent", "mobile", "travel", "movie", "music", "sport", "weather", "technology")
 
-  "DeBertaForZeroShotClassification" should "correctly load custom model with extracted signatures" taggedAs SlowTest in {
+  "DeBertaForZeroShotClassification" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    val ddd = Seq("I have a problem with my iphone that needs to be resolved asap!!")
+      .toDF("text")
+
+    val document = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val tokenizer = new Tokenizer()
+      .setInputCols(Array("document"))
+      .setOutputCol("token")
+
+    val tokenClassifier = DeBertaForZeroShotClassification
+      .pretrained()
+      .setInputCols(Array("token", "document"))
+      .setOutputCol("multi_class")
+      .setCaseSensitive(true)
+      .setCoalesceSentences(true)
+      .setCandidateLabels(candidateLabels)
+
+    val pipeline = new Pipeline().setStages(Array(document, tokenizer, tokenClassifier))
+
+    pipeline.fit(ddd).transform(ddd).show()
+  }
+
+  "DeBertaForZeroShotClassification" should "correctly load custom model with extracted signatures" taggedAs LocalTest in {
 
     val ddd = Seq(
       "I have a problem with my iphone that needs to be resolved asap!!",
@@ -84,7 +110,7 @@ class DeBertaForZeroShotClassificationTestSpec extends AnyFlatSpec {
     assert(totalDocs == totalLabels)
   }
 
-  "DeBertaForZeroShotClassification" should "be saved and loaded correctly" taggedAs SlowTest in {
+  "DeBertaForZeroShotClassification" should "be saved and loaded correctly" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -139,7 +165,7 @@ class DeBertaForZeroShotClassificationTestSpec extends AnyFlatSpec {
 
   }
 
-  "DeBertaForZeroShotClassification" should "benchmark test" taggedAs SlowTest in {
+  "DeBertaForZeroShotClassification" should "benchmark test" taggedAs LocalTest in {
 
     val conll = CoNLL(explodeSentences = false)
     val training_data =

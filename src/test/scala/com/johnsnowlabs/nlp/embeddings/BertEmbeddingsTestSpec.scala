@@ -20,7 +20,7 @@ import com.johnsnowlabs.nlp.annotators.{StopWordsCleaner, Tokenizer}
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.training.CoNLL
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.Benchmark
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.functions.{col, explode, size}
@@ -28,7 +28,32 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class BertEmbeddingsTestSpec extends AnyFlatSpec {
 
-  "Bert Embeddings" should "correctly embed tokens and sentences" taggedAs SlowTest in {
+  "Bert Embeddings" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    import ResourceHelper.spark.implicits._
+
+    val ddd = Seq("Something is weird on the notebooks, something is happening.").toDF("text")
+
+    val document = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val tokenizer = new Tokenizer()
+      .setInputCols(Array("document"))
+      .setOutputCol("token")
+
+    val embeddings = BertEmbeddings
+      .pretrained()
+      .setInputCols(Array("token", "document"))
+      .setOutputCol("bert")
+
+    val pipeline = new Pipeline().setStages(Array(document, tokenizer, embeddings))
+
+    pipeline.fit(ddd).transform(ddd).show()
+
+  }
+
+  "Bert Embeddings" should "correctly embed tokens and sentences" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -68,7 +93,7 @@ class BertEmbeddingsTestSpec extends AnyFlatSpec {
 
   }
 
-  "Bert Embeddings" should "correctly work with empty tokens" taggedAs SlowTest in {
+  "Bert Embeddings" should "correctly work with empty tokens" taggedAs LocalTest in {
 
     val smallCorpus = ResourceHelper.spark.read
       .option("header", "true")
@@ -104,7 +129,7 @@ class BertEmbeddingsTestSpec extends AnyFlatSpec {
     }
   }
 
-  "Bert Embeddings" should "benchmark test" taggedAs SlowTest in {
+  "Bert Embeddings" should "benchmark test" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
 
     val conll = CoNLL(explodeSentences = false)
@@ -146,7 +171,7 @@ class BertEmbeddingsTestSpec extends AnyFlatSpec {
     assert(totalTokens == totalEmbeddings)
   }
 
-  "Bert Embeddings" should "correctly load custom model with extracted signatures" taggedAs SlowTest in {
+  "Bert Embeddings" should "correctly load custom model with extracted signatures" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -176,7 +201,7 @@ class BertEmbeddingsTestSpec extends AnyFlatSpec {
     pipelineModel.transform(ddd)
   }
 
-  "Bert Embeddings" should "be aligned with custom tokens from Tokenizer" taggedAs SlowTest in {
+  "Bert Embeddings" should "be aligned with custom tokens from Tokenizer" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 

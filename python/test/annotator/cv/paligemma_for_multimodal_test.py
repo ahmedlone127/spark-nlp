@@ -48,7 +48,7 @@ class PaliGemmaForMultiModalTestSetup(unittest.TestCase):
 
         self.model = self.pipeline.fit(self.test_df)
 
-@pytest.mark.slow
+@pytest.mark.local
 class PaliGemmaForMultiModalTest(PaliGemmaForMultiModalTestSetup, unittest.TestCase):
 
     def setUp(self):
@@ -60,8 +60,12 @@ class PaliGemmaForMultiModalTest(PaliGemmaForMultiModalTestSetup, unittest.TestC
         for row in result:
             self.assertTrue(row["answer"] != "")
 
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        self.model.transform(self.test_df).show()
 
-@pytest.mark.slow
+
+@pytest.mark.local
 class LightPaliGemmaForMultiModalTest(PaliGemmaForMultiModalTestSetup, unittest.TestCase):
 
     def setUp(self):

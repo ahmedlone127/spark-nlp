@@ -49,7 +49,7 @@ class JanusForMultiModalTestSetup(unittest.TestCase):
 
         self.model = self.pipeline.fit(self.test_df)
 
-@pytest.mark.slow
+@pytest.mark.local
 class JanusForMultiModalTest(JanusForMultiModalTestSetup, unittest.TestCase):
 
     def setUp(self):
@@ -61,8 +61,12 @@ class JanusForMultiModalTest(JanusForMultiModalTestSetup, unittest.TestCase):
         for row in result:
             self.assertTrue(row["answer"] != "")
 
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        self.model.transform(self.test_df).show()
 
-@pytest.mark.slow
+
+@pytest.mark.local
 class LightJanusForMultiModalTest(JanusForMultiModalTestSetup, unittest.TestCase):
 
     def setUp(self):

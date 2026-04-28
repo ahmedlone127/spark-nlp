@@ -22,13 +22,18 @@ from test.annotator.common.has_max_sentence_length_test import HasMaxSentenceLen
 from test.util import SparkContextForTest
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class XlmRoBertaForTokenClassificationTestSpec(unittest.TestCase, HasMaxSentenceLengthTests):
     def setUp(self):
-        self.data = SparkContextForTest.spark.read.option("header", "true") \
-            .csv(path="file:///" + os.getcwd() + "/../src/test/resources/embeddings/sentence_embeddings.csv")
+        self.spark = SparkContextForTest.spark
+        self.data = self.spark.createDataFrame([
+            ("John Lenon was born in London and lived in Paris. My name is Sarah and I live in London",),
+            ("Rare Hendrix song draft sells for almost $17,000.",),
+            ("EU rejects German call to boycott British lamb.",)
+        ]).toDF("text")
 
-        self.tested_annotator = XlmRoBertaForTokenClassification.pretrained() \
+        self.tested_annotator = XlmRoBertaForTokenClassification \
+            .pretrained("xlm_roberta_base_token_classifier_conll03") \
             .setInputCols(["document", "token"]) \
             .setOutputCol("ner")
 
@@ -49,4 +54,25 @@ class XlmRoBertaForTokenClassificationTestSpec(unittest.TestCase, HasMaxSentence
 
         model = pipeline.fit(self.data)
         model.transform(self.data).show()
+
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        document_assembler = DocumentAssembler() \
+            .setInputCol("text") \
+            .setOutputCol("document")
+
+
+        tokenizer = Tokenizer() \
+            .setInputCols("document") \
+            .setOutputCol("token")
+
+        token_classifier = self.tested_annotator
+
+        pipeline = Pipeline(stages=[
+            document_assembler,
+            tokenizer,
+            token_classifier
+        ])
+
+        pipeline.fit(self.data).transform(self.data).show()
 

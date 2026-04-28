@@ -21,7 +21,7 @@ from test.annotator.common.has_max_sentence_length_test import HasMaxSentenceLen
 from test.util import SparkSessionForTest
 
 
-@pytest.mark.slow
+@pytest.mark.fast
 class SpanBertCorefTestSpec(unittest.TestCase, HasMaxSentenceLengthTests):
 
     def setUp(self):
@@ -69,3 +69,30 @@ class SpanBertCorefTestSpec(unittest.TestCase, HasMaxSentenceLengthTests):
             .selectExpr("explode(corefs) AS coref") \
             .selectExpr("coref.result as token", "coref.metadata") \
             .show(truncate=False)
+
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        document_assembler = DocumentAssembler() \
+            .setInputCol("text") \
+            .setOutputCol("document")
+
+        sentence_detector = SentenceDetector() \
+            .setInputCols(["document"]) \
+            .setOutputCol("sentences")
+
+        tokenizer = Tokenizer() \
+            .setInputCols(["sentences"]) \
+            .setOutputCol("tokens")
+
+        coref = self.tested_annotator
+
+        pipeline = Pipeline(stages=[
+            document_assembler,
+            sentence_detector,
+            tokenizer,
+            coref
+        ])
+
+        model = pipeline.fit(self.data)
+
+        model.transform(self.data) .show(truncate=False)

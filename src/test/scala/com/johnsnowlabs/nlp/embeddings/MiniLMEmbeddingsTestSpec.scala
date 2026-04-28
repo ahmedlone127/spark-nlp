@@ -19,14 +19,40 @@ package com.johnsnowlabs.nlp.embeddings
 import com.johnsnowlabs.nlp.annotators.sentence_detector_dl.SentenceDetectorDLModel
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.functions.{col, size}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class MiniLMEmbeddingsTestSpec extends AnyFlatSpec {
 
-  "MiniLM Embeddings" should "correctly embed multiple sentences" taggedAs SlowTest in {
+  "MiniLM Embeddings" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    import ResourceHelper.spark.implicits._
+
+    val ddd = Seq(
+      "This is a sample sentence for embedding generation.",
+      "Another example sentence to demonstrate MiniLM embeddings.",
+      "MiniLM is a lightweight and efficient sentence embedding model that can generate text embeddings for various NLP tasks.",
+      "The model achieves comparable results with BERT-base while being much smaller and faster.")
+      .toDF("text")
+
+    val document = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val embeddings = MiniLMEmbeddings
+      .pretrained()
+      .setInputCols(Array("document"))
+      .setOutputCol("minilm")
+
+    val pipeline = new Pipeline().setStages(Array(document, embeddings))
+
+    pipeline.fit(ddd).transform(ddd).show()
+
+  }
+
+  "MiniLM Embeddings" should "correctly embed multiple sentences" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -53,7 +79,7 @@ class MiniLMEmbeddingsTestSpec extends AnyFlatSpec {
 
   }
 
-  it should "have embeddings of the same size" taggedAs SlowTest in {
+  it should "have embeddings of the same size" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
     val testDf = Seq(
       "I like apples",
@@ -84,7 +110,7 @@ class MiniLMEmbeddingsTestSpec extends AnyFlatSpec {
     assert(sizesArray.forall(_ == sizesArray.head))
   }
 
-  it should "work with sentences" taggedAs SlowTest in {
+  it should "work with sentences" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
     val testData = "I really enjoy my job. This is amazing"
     val testDf = Seq(testData).toDF("text")
@@ -109,7 +135,7 @@ class MiniLMEmbeddingsTestSpec extends AnyFlatSpec {
     pipelineDF.select("minilm.embeddings").show(false)
   }
 
-  it should "not return empty embeddings" taggedAs SlowTest in {
+  it should "not return empty embeddings" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
     val interests = Seq(
       "I like music",

@@ -57,7 +57,7 @@ class ViTForImageClassificationTestSetUp(unittest.TestCase):
         self.model = pipeline.fit(self.data)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class ViTForImageClassificationTestSpec(ViTForImageClassificationTestSetUp, unittest.TestCase):
     def setUp(self):
         super().setUp()
@@ -69,8 +69,11 @@ class ViTForImageClassificationTestSpec(ViTForImageClassificationTestSetUp, unit
             file_name = row["origin"].rsplit("/", 1)[-1]
             self.assertEqual(self.gold_standards[file_name], row["result"][0])
 
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        self.model.transform(self.data).show()
 
-@pytest.mark.slow
+@pytest.mark.local
 class LightViTForImageClassificationOneImageTestSpec(ViTForImageClassificationTestSetUp, unittest.TestCase):
 
     def setUp(self):
@@ -87,7 +90,7 @@ class LightViTForImageClassificationOneImageTestSpec(ViTForImageClassificationTe
             self.assertTrue(len(result["class"]) > 0)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class LightViTForImageClassificationTestSpec(ViTForImageClassificationTestSetUp, unittest.TestCase):
 
     def setUp(self):

@@ -19,7 +19,7 @@ import com.johnsnowlabs.nlp.annotators.SparkSessionTest
 import com.johnsnowlabs.nlp.annotators.cv.{Qwen2VLTransformer, SmolVLMTransformer}
 import com.johnsnowlabs.nlp.annotators.seq2seq.AutoGGUFVisionModel
 import com.johnsnowlabs.nlp.{AnnotatorType, AssertAnnotations}
-import com.johnsnowlabs.tags.{FastTest, SlowTest}
+import com.johnsnowlabs.tags.{FastTest, LocalTest, SlowTest}
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.functions.{col, explode}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -38,7 +38,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
   val pdfDirectory = "src/test/resources/reader/pdf/"
   val filesDirectory = "src/test/resources/reader/"
 
-  "Reader2Image" should "read different image source content from an HTML file" taggedAs SlowTest in {
+  "Reader2Image" should "read different image source content from an HTML file" taggedAs LocalTest in {
     val sourceFile = "example-images.html"
     val reader2Image = new Reader2Image()
       .setContentType("text/html")
@@ -66,7 +66,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
 
   }
 
-  it should "read image from a Markdown file" taggedAs SlowTest in {
+  it should "read image from a Markdown file" taggedAs LocalTest in {
     val sourceFile = "example-images.md"
     val reader2Image = new Reader2Image()
       .setContentType("text/markdown")
@@ -94,7 +94,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
 
   }
 
-  it should "ignore files that are not supported inside a directory" taggedAs SlowTest in {
+  it should "ignore files that are not supported inside a directory" taggedAs LocalTest in {
     val supportedFiles = getSupportedFiles(mixDirectory)
     val reader2Image = new Reader2Image()
       .setContentPath(s"$mixDirectory")
@@ -274,7 +274,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
     }
   }
 
-  it should "read a directory of mixed files and integrate with VLM models" taggedAs SlowTest in {
+  it should "read a directory of mixed files and integrate with VLM models" taggedAs LocalTest in {
     // This pipeline requires 29GB of RAM to run
     val reader2Image = new Reader2Image()
       .setContentPath(filesDirectory)
@@ -298,7 +298,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
     assert(!resultDf.isEmpty)
   }
 
-  it should "add different user instructions to the prompt" taggedAs SlowTest in {
+  it should "add different user instructions to the prompt" taggedAs LocalTest in {
     val reader2Doc = new Reader2Image()
       .setContentPath(emailDirectory)
       .setOutputCol("image")
@@ -325,7 +325,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
     assert(!resultDf.isEmpty)
   }
 
-  it should "work with SmolVLMTransformer" taggedAs SlowTest in {
+  it should "work with SmolVLMTransformer" taggedAs LocalTest in {
     val reader2Doc = new Reader2Image()
       .setContentPath(emailDirectory)
       .setOutputCol("image")
@@ -353,7 +353,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
     assert(!resultDf.isEmpty)
   }
 
-  it should "infer for word files" taggedAs SlowTest in {
+  it should "infer for word files" taggedAs LocalTest in {
     val reader2Doc = new Reader2Image()
       .setContentPath(s"$wordDirectory/contains-pictures.docx")
       .setOutputCol("image")
@@ -381,7 +381,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
     assert(!resultDf.isEmpty)
   }
 
-  it should "infer for raw image files" taggedAs SlowTest in {
+  it should "infer for raw image files" taggedAs LocalTest in {
     val reader2Image = new Reader2Image()
       .setContentPath(s"$imageDirectory/SwitzerlandAlps.jpg")
       .setOutputCol("image")
@@ -445,7 +445,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
     assert(!resultDf.isEmpty)
   }
 
-  it should "work with exception column" taggedAs SlowTest in {
+  it should "work with exception column" taggedAs LocalTest in {
     val reader2Doc = new Reader2Image()
       .setContentPath(unsupportedFiles)
       .setOutputCol("image")
@@ -485,7 +485,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
     assert(resultDf.filter(col("exception").isNotNull).count() == 1)
   }
 
-  it should "output empty dataframe for unsupported files" taggedAs SlowTest in {
+  it should "output empty dataframe for unsupported files" taggedAs LocalTest in {
     val reader2Image = new Reader2Image()
       .setContentPath("src/test/resources/reader/csv")
       .setOutputCol("image")
@@ -524,7 +524,7 @@ class Reader2ImageTest extends AnyFlatSpec with SparkSessionTest {
     }
   }
 
-  it should "integrate PDF images output with VLM models" taggedAs SlowTest in {
+  it should "integrate PDF images output with VLM models" taggedAs LocalTest in {
     val sourceFile = "pdf-with-2images.pdf"
     val reader2Image = new Reader2Image()
       .setContentPath(s"$pdfDirectory/$sourceFile")

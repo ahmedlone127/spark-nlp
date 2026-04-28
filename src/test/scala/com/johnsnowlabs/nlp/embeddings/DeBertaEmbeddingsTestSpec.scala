@@ -21,7 +21,7 @@ import com.johnsnowlabs.nlp.annotators.Tokenizer
 import com.johnsnowlabs.nlp.base._
 import com.johnsnowlabs.nlp.training.CoNLL
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.Benchmark
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.functions.{col, explode, size}
@@ -29,7 +29,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class DeBertaEmbeddingsTestSpec extends AnyFlatSpec {
 
-  "DeBertaEmbeddings" should "correctly load pretrained model" taggedAs SlowTest in {
+  "DeBertaEmbeddings" should "correctly load pretrained model" taggedAs LocalTest in {
 
     val smallCorpus = ResourceHelper.spark.read
       .option("header", "true")
@@ -66,7 +66,37 @@ class DeBertaEmbeddingsTestSpec extends AnyFlatSpec {
     }
   }
 
-  "DeBertaEmbeddings" should "be saved and loaded correctly" taggedAs SlowTest in {
+  "DeBertaEmbeddings" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    val smallCorpus = ResourceHelper.spark.read
+      .option("header", "true")
+      .csv("src/test/resources/embeddings/sentence_embeddings.csv")
+      .limit(10)
+
+    val documentAssembler = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val sentence = new SentenceDetector()
+      .setInputCols("document")
+      .setOutputCol("sentence")
+
+    val tokenizer = new Tokenizer()
+      .setInputCols(Array("sentence"))
+      .setOutputCol("token")
+
+    val embeddings = DeBertaEmbeddings
+      .pretrained()
+      .setInputCols("sentence", "token")
+      .setOutputCol("embeddings")
+
+    val pipeline = new Pipeline()
+      .setStages(Array(documentAssembler, sentence, tokenizer, embeddings))
+
+    pipeline.fit(smallCorpus).transform(smallCorpus).show()
+  }
+
+  "DeBertaEmbeddings" should "be saved and loaded correctly" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -120,7 +150,7 @@ class DeBertaEmbeddingsTestSpec extends AnyFlatSpec {
     val loadedSequenceModel = DeBertaEmbeddings.load("./tmp_deberta_model")
 
   }
-  "DeBertaEmbeddings" should "benchmark test" taggedAs SlowTest in {
+  "DeBertaEmbeddings" should "benchmark test" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
 
     val conll = CoNLL(explodeSentences = false)
@@ -167,7 +197,7 @@ class DeBertaEmbeddingsTestSpec extends AnyFlatSpec {
     }
   }
 
-  "DeBertaEmbeddings" should "be aligned with custom tokens from Tokenizer" taggedAs SlowTest in {
+  "DeBertaEmbeddings" should "be aligned with custom tokens from Tokenizer" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 

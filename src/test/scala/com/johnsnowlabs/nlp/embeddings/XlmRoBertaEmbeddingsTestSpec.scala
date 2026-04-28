@@ -20,15 +20,56 @@ import com.johnsnowlabs.nlp.annotators.{StopWordsCleaner, Tokenizer}
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.training.CoNLL
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.Benchmark
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.functions.{col, explode, size}
 import org.scalatest.flatspec.AnyFlatSpec
+import ResourceHelper.spark.implicits._
 
 class XlmRoBertaEmbeddingsTestSpec extends AnyFlatSpec {
 
-  "XlmRoBertaEmbeddings" should "correctly work with empty tokens" taggedAs SlowTest in {
+  "XlmRoBertaEmbeddings" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    val smallCorpus = ResourceHelper.spark.read
+      .option("header", "true")
+      .csv("src/test/resources/embeddings/sentence_embeddings.csv")
+
+    val documentAssembler = new DocumentAssembler()
+    val data = Seq(
+      "John Snow Labs builds NLP for healthcare.",
+      "XLM-RoBERTa embeddings support many languages.",
+      "This is an end-to-end pipeline test.").toDF("text")
+
+    val document = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val tokenizer = new Tokenizer()
+      .setInputCols(Array("document"))
+      .setOutputCol("token")
+
+    val stopWordsCleaner = new StopWordsCleaner()
+      .setInputCols("token")
+      .setOutputCol("cleanTokens")
+      .setStopWords(
+        Array("this", "is", "my", "document", "sentence", "second", "first", ",", "."))
+      .setCaseSensitive(false)
+
+    val embeddings = XlmRoBertaEmbeddings
+      .pretrained()
+      .setInputCols("document", "cleanTokens")
+      .setOutputCol("embeddings")
+      .setCaseSensitive(true)
+
+    val pipeline = new Pipeline()
+      .setStages(Array(documentAssembler, tokenizer, stopWordsCleaner, embeddings))
+
+    pipeline.fit(smallCorpus).transform(smallCorpus).show()
+
+  }
+
+  "XlmRoBertaEmbeddings" should "correctly work with empty tokens" taggedAs LocalTest in {
 
     val smallCorpus = ResourceHelper.spark.read
       .option("header", "true")
@@ -64,7 +105,7 @@ class XlmRoBertaEmbeddingsTestSpec extends AnyFlatSpec {
     }
   }
 
-  "XlmRoBertaEmbeddings" should "benchmark test" taggedAs SlowTest in {
+  "XlmRoBertaEmbeddings" should "benchmark test" taggedAs LocalTest in {
     import ResourceHelper.spark.implicits._
 
     val conll = CoNLL()
@@ -106,7 +147,7 @@ class XlmRoBertaEmbeddingsTestSpec extends AnyFlatSpec {
     assert(totalTokens == totalEmbeddings)
   }
 
-  "XlmRoBertaEmbeddings" should "download, save, and load a model" taggedAs SlowTest in {
+  "XlmRoBertaEmbeddings" should "download, save, and load a model" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -153,7 +194,7 @@ class XlmRoBertaEmbeddingsTestSpec extends AnyFlatSpec {
 
   }
 
-  "XlmRoBertaEmbeddings" should "be aligned with custom tokens from Tokenizer" taggedAs SlowTest in {
+  "XlmRoBertaEmbeddings" should "be aligned with custom tokens from Tokenizer" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 

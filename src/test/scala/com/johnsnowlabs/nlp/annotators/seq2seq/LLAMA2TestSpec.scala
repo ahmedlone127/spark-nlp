@@ -18,14 +18,14 @@ package com.johnsnowlabs.nlp.annotators.seq2seq
 
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.{SlowTest, FastTest}
+import com.johnsnowlabs.tags.{FastTest, LocalTest, SlowTest}
 import com.johnsnowlabs.util.Benchmark
 import org.apache.spark.ml.Pipeline
 import org.scalatest.flatspec.AnyFlatSpec
 
 class LLAMA2TestSpec extends AnyFlatSpec {
 
-  "llama-7b" should "should handle temperature=0 correctly and not crash when predicting more than 1 element with doSample=True" taggedAs SlowTest in {
+  "llama-7b" should "should handle temperature=0 correctly and not crash when predicting more than 1 element with doSample=True" taggedAs LocalTest in {
     // Even tough the Paper states temperature in interval [0,1), using temperature=0 will result in division by 0 error.
     // Also DoSample=True may result in infinities being generated and distFiltered.length==0 which results in exception if we don't return 0 instead internally.
     val testData = ResourceHelper.spark
@@ -64,4 +64,34 @@ class LLAMA2TestSpec extends AnyFlatSpec {
       .overwrite()
       .save("/tmp/llama-7b-4bit-model")
   }
+
+  "llama-7b" should "run end to end pipeline test" taggedAs SlowTest in {
+    val testData = ResourceHelper.spark
+      .createDataFrame(Seq(
+        (1, "PG&E stated it scheduled the blackouts in response to forecasts for high winds ")))
+      .toDF("id", "text")
+      .repartition(1)
+    val documentAssembler = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("documents")
+
+    val bart = LLAMA2Transformer
+      .pretrained()
+      .setInputCols(Array("documents"))
+      .setDoSample(true)
+      .setMaxOutputLength(50)
+      .setOutputCol("generation")
+      .setBeamSize(2)
+
+    val pipeline = new Pipeline()
+      .setStages(Array(documentAssembler, bart))
+
+    val pipelineModel = pipeline.fit(testData)
+
+    pipelineModel
+      .transform(testData)
+      .show(truncate = false)
+
+  }
+
 }

@@ -43,7 +43,7 @@ class DistilBertForMultipleChoiceTestSetup(unittest.TestCase):
         self.pipeline_model = pipeline.fit(empty_df)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class DistilBertForMultipleChoiceTest(DistilBertForMultipleChoiceTestSetup, unittest.TestCase):
 
     def setUp(self):
@@ -57,8 +57,12 @@ class DistilBertForMultipleChoiceTest(DistilBertForMultipleChoiceTestSetup, unit
         for row in result_df.collect():
             self.assertTrue(row["answer"][0].result != "")
 
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        self.pipeline_model.transform(self.data).show(truncate=False)
 
-@pytest.mark.slow
+
+@pytest.mark.local
 class LightDistilBertForMultipleChoiceTest(DistilBertForMultipleChoiceTestSetup, unittest.TestCase):
 
     def setUp(self):

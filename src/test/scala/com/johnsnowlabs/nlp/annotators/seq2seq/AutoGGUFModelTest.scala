@@ -3,7 +3,7 @@ package com.johnsnowlabs.nlp.annotators.seq2seq
 import com.johnsnowlabs.nlp.Annotation
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.TestUtils.measureRAMChange
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
@@ -50,19 +50,24 @@ class AutoGGUFModelTest extends AnyFlatSpec {
       })
   }
 
-  it should "create completions" taggedAs SlowTest in {
+  it should "create completions" taggedAs LocalTest in {
     val data = Seq("Hello, I am a").toDF("text")
     val result = pipeline.fit(data).transform(data)
     assertAnnotationsNonEmpty(result)
   }
 
-  it should "create batch completions" taggedAs SlowTest in {
+  it should "run end to end pipeline test" taggedAs SlowTest in {
+    val data = Seq("Hello, I am a").toDF("text")
+    pipeline.fit(data).transform(data).show()
+  }
+
+  it should "create batch completions" taggedAs LocalTest in {
     val pipeline = new Pipeline().setStages(Array(documentAssembler, model))
     val result = pipeline.fit(data).transform(data)
     assertAnnotationsNonEmpty(result)
   }
 
-  it should "be serializable" taggedAs SlowTest in {
+  it should "be serializable" taggedAs LocalTest in {
     val data = Seq("Hello, I am a").toDF("text")
     lazy val pipeline = new Pipeline().setStages(Array(documentAssembler, model))
     model.setNPredict(5)
@@ -85,7 +90,7 @@ class AutoGGUFModelTest extends AnyFlatSpec {
       .show(truncate = false)
   }
 
-  it should "accept all parameters that are settable" taggedAs SlowTest in {
+  it should "accept all parameters that are settable" taggedAs LocalTest in {
     // Model Parameters
     model.setNThreads(8)
 //    model.setNThreadsDraft(8)
@@ -183,7 +188,7 @@ class AutoGGUFModelTest extends AnyFlatSpec {
     assert(metadataMap.nonEmpty)
   }
 
-  it should "return error messages when completions can't be produced" taggedAs SlowTest in {
+  it should "return error messages when completions can't be produced" taggedAs LocalTest in {
     val model = AutoGGUFModel
       .pretrained()
       .setInputCols("document")
@@ -207,7 +212,7 @@ class AutoGGUFModelTest extends AnyFlatSpec {
       })
   }
 
-  it should "be able to also load pretrained AutoGGUFVisionModels" taggedAs SlowTest in {
+  it should "be able to also load pretrained AutoGGUFVisionModels" taggedAs LocalTest in {
     val model = AutoGGUFModel
       .pretrained("Qwen2.5_VL_3B_Instruct_Q4_K_M_gguf")
       .setInputCols("document")
@@ -221,7 +226,7 @@ class AutoGGUFModelTest extends AnyFlatSpec {
     result.show()
   }
 
-  it should "accept protocol prepended paths" taggedAs SlowTest in {
+  it should "accept protocol prepended paths" taggedAs LocalTest in {
     val data = Seq("Hello, I am a").toDF("text")
     lazy val pipeline = new Pipeline().setStages(Array(documentAssembler, model))
     val pipelineModel = pipeline.fit(data)
@@ -252,7 +257,7 @@ class AutoGGUFModelTest extends AnyFlatSpec {
     assert(ramChange < -100, "Freed RAM should be greater than 100 MB")
   }
 
-  it should "be able to remove thinking tags" taggedAs SlowTest in {
+  it should "be able to remove thinking tags" taggedAs LocalTest in {
     val thinkTag = "think"
     val model = AutoGGUFModel
       .loadSavedModel("models/Qwen3-1.7B-Q4_K_M.gguf", ResourceHelper.spark)
@@ -316,7 +321,7 @@ class AutoGGUFModelTest extends AnyFlatSpec {
 //  }
 //
 //
-//  it should "be compatible with sentencesplitter" taggedAs SlowTest in {
+//  it should "be compatible with sentencesplitter" taggedAs LocalTest in {
 //    // TODO
 //    val model = AutoGGUFModel
 //      .pretrained()

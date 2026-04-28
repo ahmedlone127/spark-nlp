@@ -20,7 +20,7 @@ from sparknlp.base import *
 from test.util import SparkContextForTest
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class Phi3TransformerTextGenerationTestSpec(unittest.TestCase):
     def setUp(self):
         self.spark = SparkContextForTest.spark
@@ -44,4 +44,26 @@ class Phi3TransformerTextGenerationTestSpec(unittest.TestCase):
         results = pipeline.fit(data).transform(data)
 
         results.select("generation.result").show(truncate=False)
+
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        data = self.spark.createDataFrame([
+            [1, """Leonardo Da Vinci invented the microscope?""".strip().replace("\n", " ")]]).toDF("id", "text")
+
+        document_assembler = DocumentAssembler() \
+            .setInputCol("text") \
+            .setOutputCol("documents")
+
+        phi3 = Phi3Transformer \
+            .pretrained() \
+            .setMaxOutputLength(50) \
+            .setDoSample(False) \
+            .setInputCols(["documents"]) \
+            .setOutputCol("generation")
+
+        pipeline = Pipeline().setStages([document_assembler, phi3])
+        pipeline.fit(data).transform(data).show()
+
+
+
 

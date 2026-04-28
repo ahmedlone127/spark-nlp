@@ -3,7 +3,7 @@ package com.johnsnowlabs.nlp.embeddings
 import com.johnsnowlabs.nlp.Annotation
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.{LocalTest, SlowTest}
 import com.johnsnowlabs.util.TestUtils.measureRAMChange
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.{Dataset, Row}
@@ -34,7 +34,7 @@ class AutoGGUFEmbeddingsTestSpec extends AnyFlatSpec {
   println(ResourceHelper.spark.version)
   // nomic-embed-text-v1.5.Q8_0.gguf
   def model(poolingType: String): AutoGGUFEmbeddings = AutoGGUFEmbeddings
-    .loadSavedModel("models/Qwen3-Embedding-0.6B-Q8_0.gguf", ResourceHelper.spark)
+    .pretrained()
     .setInputCols("document")
     .setOutputCol("embeddings")
     .setBatchSize(4)
@@ -44,7 +44,11 @@ class AutoGGUFEmbeddingsTestSpec extends AnyFlatSpec {
   def pipeline(embedModel: AutoGGUFEmbeddings = model("MEAN")): Pipeline =
     new Pipeline().setStages(Array(documentAssembler, embedModel))
 
-  it should "produce embeddings" taggedAs SlowTest in {
+  it should "run end to end pipeline test" taggedAs SlowTest in {
+    pipeline().fit(data).transform(data).show()
+  }
+
+  it should "produce embeddings" taggedAs LocalTest in {
     val result = pipeline().fit(data).transform(data)
     val collected = Annotation.collect(result, "embeddings")
 
@@ -73,7 +77,7 @@ class AutoGGUFEmbeddingsTestSpec extends AnyFlatSpec {
     Seq("MEAN", "CLS", "LAST").foreach(testPoolingType)
   }
 
-  it should "be serializable" taggedAs SlowTest in {
+  it should "be serializable" taggedAs LocalTest in {
 
     val data = Seq("Hello, I am a").toDF("text")
     lazy val pipeline = new Pipeline().setStages(Array(documentAssembler, model("MEAN")))
@@ -96,7 +100,7 @@ class AutoGGUFEmbeddingsTestSpec extends AnyFlatSpec {
       .show(truncate = false)
   }
 
-  it should "return error messages when embeddings can't be created" taggedAs SlowTest in {
+  it should "return error messages when embeddings can't be created" taggedAs LocalTest in {
     val result = pipeline().fit(longData).transform(longData)
     val collected = Annotation.collect(result, "embeddings")
     assert(collected.length == longDataCopies)
@@ -109,7 +113,7 @@ class AutoGGUFEmbeddingsTestSpec extends AnyFlatSpec {
 
   }
 
-  it should "embed long text" taggedAs SlowTest in {
+  it should "embed long text" taggedAs LocalTest in {
     val result = pipeline(
       model("MEAN")
         .setNUbatch(4096)
@@ -126,7 +130,7 @@ class AutoGGUFEmbeddingsTestSpec extends AnyFlatSpec {
     }
   }
 
-  it should "accept protocol prepended paths" taggedAs SlowTest in {
+  it should "accept protocol prepended paths" taggedAs LocalTest in {
     val data = Seq("Hello, I am a").toDF("text")
     lazy val pipeline = new Pipeline().setStages(Array(documentAssembler, model("MEAN")))
     val pipelineModel = pipeline.fit(data)
@@ -141,12 +145,12 @@ class AutoGGUFEmbeddingsTestSpec extends AnyFlatSpec {
     AutoGGUFEmbeddings.load(savePath)
   }
 
-  it should "load models with deprecated parameters" taggedAs SlowTest in {
+  it should "load models with deprecated parameters" taggedAs LocalTest in {
     AutoGGUFEmbeddings.pretrained("Nomic_Embed_Text_v1.5.Q8_0.gguf")
   }
 
   // This test requires cpu
-  it should "be closeable" taggedAs SlowTest in {
+  it should "be closeable" taggedAs LocalTest in {
     val model = AutoGGUFEmbeddings
       .pretrained()
       .setInputCols("document")

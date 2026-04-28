@@ -20,14 +20,48 @@ import com.johnsnowlabs.nlp.annotator._
 import com.johnsnowlabs.nlp.base._
 import com.johnsnowlabs.nlp.embeddings.UniversalSentenceEncoder
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.{FastTest, SlowTest}
+import com.johnsnowlabs.tags.{FastTest, LocalTest, SlowTest}
 import org.apache.spark.ml.Pipeline
 import org.scalatest.flatspec.AnyFlatSpec
 
 class ClassifierDLTestSpec extends AnyFlatSpec {
   import ResourceHelper.spark.implicits._
 
-  "ClassifierDL" should "correctly train IMDB train dataset" taggedAs SlowTest in {
+  "ClassifierDL" should "run end to end pipeline test" taggedAs SlowTest in {
+
+    val smallCorpus = ResourceHelper.spark.read
+      .option("header", "true")
+      .csv("src/test/resources/classifier/sentiment.csv")
+
+    println("count of training dataset: ", smallCorpus.count)
+
+    val documentAssembler = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val sentenceEmbeddings = BertSentenceEmbeddings
+      .pretrained("sent_small_bert_L2_128")
+      .setInputCols("document")
+      .setOutputCol("sentence_embeddings")
+
+    val docClassifier = new ClassifierDLApproach()
+      .setInputCols("sentence_embeddings")
+      .setOutputCol("category")
+      .setLabelColumn("label")
+      .setBatchSize(8)
+      .setMaxEpochs(1)
+      .setLr(5e-3f)
+      .setDropout(0.5f)
+      .setRandomSeed(44)
+
+    val pipeline = new Pipeline()
+      .setStages(Array(documentAssembler, sentenceEmbeddings, docClassifier))
+
+    pipeline.fit(smallCorpus).transform(smallCorpus).show()
+
+  }
+
+  "ClassifierDL" should "correctly train IMDB train dataset" taggedAs LocalTest in {
 
     val smallCorpus = ResourceHelper.spark.read
       .option("header", "true")
@@ -63,7 +97,7 @@ class ClassifierDLTestSpec extends AnyFlatSpec {
 
   }
 
-  "ClassifierDL" should "not fail on empty inputs" taggedAs SlowTest in {
+  "ClassifierDL" should "not fail on empty inputs" taggedAs LocalTest in {
 
     val testData = ResourceHelper.spark
       .createDataFrame(
@@ -108,7 +142,7 @@ class ClassifierDLTestSpec extends AnyFlatSpec {
     classifierDL.getClasses.foreach(x => print(x + ", "))
   }
 
-  "ClassifierDL" should "not fail on empty validation sets" taggedAs SlowTest in {
+  "ClassifierDL" should "not fail on empty validation sets" taggedAs LocalTest in {
     val documentAssembler = new DocumentAssembler()
       .setInputCol("text")
       .setOutputCol("document")

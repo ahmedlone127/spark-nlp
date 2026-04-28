@@ -49,7 +49,7 @@ class Qwen2VLTransformerTestSetup(unittest.TestCase):
 
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class Qwen2VLTransformerTest(Qwen2VLTransformerTestSetup, unittest.TestCase):
 
    def setUp(self):
@@ -62,8 +62,13 @@ class Qwen2VLTransformerTest(Qwen2VLTransformerTestSetup, unittest.TestCase):
            self.assertTrue(row["answer"] != "")
            print(row["answer"])
 
+   @pytest.mark.slow
+   def test_end_to_end_pipeline(self):
+        self.model.transform(self.test_df).show()
 
-@pytest.mark.slow
+
+
+@pytest.mark.local
 class LightQwen2VLTransformerTest(Qwen2VLTransformerTestSetup, unittest.TestCase):
 
     def setUp(self):

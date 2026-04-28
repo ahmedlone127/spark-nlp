@@ -73,7 +73,7 @@ class CLIPForZeroShotClassificationTestSetUp(unittest.TestCase):
         self.model = pipeline.fit(self.data)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class CLIPForZeroShotClassificationTestSpec(
     CLIPForZeroShotClassificationTestSetUp, unittest.TestCase
 ):
@@ -91,8 +91,12 @@ class CLIPForZeroShotClassificationTestSpec(
             file_name = row["origin"].rsplit("/", 1)[-1]
             self.assertEqual(self.gold_standards[file_name], row["result"][0])
 
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        self.model.transform(self.data).show()
 
-@pytest.mark.slow
+
+@pytest.mark.local
 class LightCLIPForZeroShotClassificationOneImageTestSpec(
     CLIPForZeroShotClassificationTestSetUp, unittest.TestCase
 ):
@@ -112,7 +116,7 @@ class LightCLIPForZeroShotClassificationOneImageTestSpec(
             self.assertTrue(len(result["label"]) > 0)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class LightCLIPForZeroShotClassificationTestSpec(
     CLIPForZeroShotClassificationTestSetUp, unittest.TestCase
 ):

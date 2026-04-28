@@ -20,7 +20,7 @@ import com.johnsnowlabs.nlp.annotators.Tokenizer
 import com.johnsnowlabs.nlp.base.DocumentAssembler
 import com.johnsnowlabs.nlp.training.CoNLL
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.SlowTest
+import com.johnsnowlabs.tags.LocalTest
 import com.johnsnowlabs.util.Benchmark
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.functions.{col, explode, size}
@@ -33,7 +33,7 @@ class DistilBertForZeroShotClassificationTestSpec extends AnyFlatSpec {
   val candidateLabels =
     Array("urgent", "mobile", "travel", "movie", "music", "sport", "weather", "technology")
 
-  "DistilBertForZeroShotClassification" should "correctly load custom model with extracted signatures" taggedAs SlowTest in {
+  "DistilBertForZeroShotClassification" should "correctly load custom model with extracted signatures" taggedAs LocalTest in {
 
     val ddd = Seq(
       "I have a problem with my iphone that needs to be resolved asap!!",
@@ -82,8 +82,35 @@ class DistilBertForZeroShotClassificationTestSpec extends AnyFlatSpec {
 
     assert(totalDocs == totalLabels)
   }
+  "DistilBertForZeroShotClassification" should "correctly load custom model with extracted signatures" taggedAs LocalTest in {
 
-  "DistilBertForZeroShotClassification" should "be saved and loaded correctly" taggedAs SlowTest in {
+    val ddd = Seq("I have a problem with my iphone that needs to be resolved asap!!")
+      .toDF("text")
+
+    val document = new DocumentAssembler()
+      .setInputCol("text")
+      .setOutputCol("document")
+
+    val tokenizer = new Tokenizer()
+      .setInputCols(Array("document"))
+      .setOutputCol("token")
+
+    val tokenClassifier = DistilBertForZeroShotClassification
+      .loadSavedModel("1", ResourceHelper.spark)
+      .setInputCols(Array("token", "document"))
+      .setOutputCol("multi_class")
+      .setCaseSensitive(true)
+      .setCoalesceSentences(true)
+      .setCandidateLabels(candidateLabels)
+
+    val pipeline = new Pipeline().setStages(Array(document, tokenizer, tokenClassifier))
+
+    val pipelineModel = pipeline.fit(ddd)
+    pipelineModel.transform(ddd).show()
+
+  }
+
+  "DistilBertForZeroShotClassification" should "be saved and loaded correctly" taggedAs LocalTest in {
 
     import ResourceHelper.spark.implicits._
 
@@ -138,7 +165,7 @@ class DistilBertForZeroShotClassificationTestSpec extends AnyFlatSpec {
 
   }
 
-  "DistilBertForZeroShotClassification" should "benchmark test" taggedAs SlowTest in {
+  "DistilBertForZeroShotClassification" should "benchmark test" taggedAs LocalTest in {
 
     val conll = CoNLL(explodeSentences = false)
     val training_data =

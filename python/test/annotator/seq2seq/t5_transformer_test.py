@@ -20,7 +20,7 @@ from sparknlp.base import *
 from test.util import SparkContextForTest
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class T5TransformerQATestSpec(unittest.TestCase):
     def setUp(self):
         self.spark = SparkContextForTest.spark
@@ -49,8 +49,33 @@ class T5TransformerQATestSpec(unittest.TestCase):
 
         results.select("questions.result", "answers.result").show(truncate=False)
 
+    @pytest.mark.slow
+    def test_end_to_end_pipeline(self):
+        data = self.spark.createDataFrame([
+            [1, "Which is the capital of France? Who was the first president of USA?"],
+            [1, "Which is the capital of Bulgaria ?"],
+            [2, "Who is Donald Trump?"]]).toDF("id", "text")
 
-@pytest.mark.slow
+        document_assembler = DocumentAssembler() \
+            .setInputCol("text") \
+            .setOutputCol("documents")
+
+        sentence_detector = SentenceDetectorDLModel \
+            .pretrained() \
+            .setInputCols(["documents"]) \
+            .setOutputCol("questions")
+
+        t5 = T5Transformer.pretrained() \
+            .setInputCols(["questions"]) \
+            .setOutputCol("answers")
+
+        pipeline = Pipeline().setStages([document_assembler, sentence_detector, t5])
+        pipeline.fit(data).transform(data).show()
+
+
+
+
+@pytest.mark.local
 class T5TransformerSummaryTestSpec(unittest.TestCase):
     def setUp(self):
         self.spark = SparkContextForTest.spark
@@ -92,7 +117,7 @@ class T5TransformerSummaryTestSpec(unittest.TestCase):
         results.select("summaries.result").show(truncate=False)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class T5TransformerSummaryWithRepetitionPenaltyTestSpec(unittest.TestCase):
     def setUp(self):
         self.spark = SparkContextForTest.spark
@@ -129,7 +154,7 @@ class T5TransformerSummaryWithRepetitionPenaltyTestSpec(unittest.TestCase):
         results.select("summaries.result").show(truncate=False)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class T5TransformerSummaryWithSamplingAndDeactivatedTopKTestSpec(unittest.TestCase):
     def setUp(self):
         self.spark = SparkContextForTest.spark
@@ -167,7 +192,7 @@ class T5TransformerSummaryWithSamplingAndDeactivatedTopKTestSpec(unittest.TestCa
         results.select("summaries.result").show(truncate=False)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class T5TransformerSummaryWithSamplingAndTemperatureTestSpec(unittest.TestCase):
     def setUp(self):
         self.spark = SparkContextForTest.spark
@@ -206,7 +231,7 @@ class T5TransformerSummaryWithSamplingAndTemperatureTestSpec(unittest.TestCase):
         results.select("summaries.result").show(truncate=False)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class T5TransformerSummaryWithSamplingAndTopPTestSpec(unittest.TestCase):
     def setUp(self):
         self.spark = SparkContextForTest.spark
@@ -245,7 +270,7 @@ class T5TransformerSummaryWithSamplingAndTopPTestSpec(unittest.TestCase):
         results.select("summaries.result").show(truncate=False)
 
 
-@pytest.mark.slow
+@pytest.mark.local
 class T5TransformerSummaryWithSamplingTestSpec(unittest.TestCase):
     def setUp(self):
         self.spark = SparkContextForTest.spark

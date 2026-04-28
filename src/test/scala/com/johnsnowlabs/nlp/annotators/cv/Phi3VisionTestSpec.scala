@@ -19,7 +19,7 @@ package com.johnsnowlabs.nlp.annotators.cv
 import com.johnsnowlabs.nlp.base.LightPipeline
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
 import com.johnsnowlabs.nlp.{Annotation, AssertAnnotations, ImageAssembler}
-import com.johnsnowlabs.tags.{FastTest, SlowTest}
+import com.johnsnowlabs.tags.{FastTest, LocalTest, SlowTest}
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
@@ -29,7 +29,7 @@ class Phi3VisionTestSpec extends AnyFlatSpec {
 
   lazy val model = getPhi3VisionPipelineModel
 
-  "Phi3Vision" should "answer a question for a given image" taggedAs SlowTest in {
+  "Phi3Vision" should "answer a question for a given image" taggedAs LocalTest in {
 
     val testDF = getTestDF
     val result = model.transform(testDF)
@@ -45,8 +45,13 @@ class Phi3VisionTestSpec extends AnyFlatSpec {
     }
 
   }
+  "Phi3Vision" should "run end to end pipeline test" taggedAs SlowTest in {
 
-  it should "work with light pipeline annotate" taggedAs SlowTest in {
+    val testDF = getTestDF
+    model.transform(testDF).show()
+  }
+
+  it should "work with light pipeline annotate" taggedAs LocalTest in {
     val lightPipeline = new LightPipeline(model)
     val imagePath = "src/test/resources/image/egyptian_cat.jpeg"
     val resultAnnotate =
@@ -58,7 +63,7 @@ class Phi3VisionTestSpec extends AnyFlatSpec {
     assert(resultAnnotate("answer").head.contains("cat"))
   }
 
-  it should "work with light pipeline full annotate" taggedAs SlowTest in {
+  it should "work with light pipeline full annotate" taggedAs LocalTest in {
     val lightPipeline = new LightPipeline(model)
     val imagePath = "src/test/resources/image/bluetick.jpg"
     val resultFullAnnotate =
@@ -72,7 +77,7 @@ class Phi3VisionTestSpec extends AnyFlatSpec {
     assert(answerAnnotation.result.nonEmpty)
   }
 
-  it should "fullAnnotate with empty Map when a text is empty" taggedAs SlowTest in {
+  it should "fullAnnotate with empty Map when a text is empty" taggedAs LocalTest in {
     val lightPipeline = new LightPipeline(model)
     val imagesPath = Array(
       "src/test/resources/image/bluetick.jpg",
@@ -110,7 +115,7 @@ class Phi3VisionTestSpec extends AnyFlatSpec {
     }
   }
 
-  it should "annotate with empty Map when a text is empty" taggedAs SlowTest in {
+  it should "annotate with empty Map when a text is empty" taggedAs LocalTest in {
     val lightPipeline = new LightPipeline(model)
     val imagesPath = Array(
       "src/test/resources/image/bluetick.jpg",

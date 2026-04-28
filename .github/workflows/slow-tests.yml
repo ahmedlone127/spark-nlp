@@ -1,0 +1,106 @@
+name: slow-tests
+
+on:
+  pull_request:
+    branches:
+      - 'master'
+      - 'main'
+      - '*release*'
+      - 'release/**'
+
+jobs:
+  slow-tests-spark34:
+    runs-on: macos-15-intel
+    continue-on-error: true
+    env:
+      TF_CPP_MIN_LOG_LEVEL: 3
+      JAVA_OPTS: "-Xmx6144m -XX:+UseG1GC"
+    name: Slow Tests on Apache Spark 3.4.x
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+      - name: Install Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+          architecture: x64
+      - name: Install OpenVINO Dependencies (oneTBB)
+        run: |
+          brew install tbb
+          # Set library paths for OpenVINO
+          TBB_LIB_PATH=$(brew --prefix tbb)/lib
+          echo "DYLD_LIBRARY_PATH=$TBB_LIB_PATH:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "DYLD_FALLBACK_LIBRARY_PATH=$TBB_LIB_PATH" >> $GITHUB_ENV
+          # Also set Java library path for Spark
+          echo "SPARK_SUBMIT_OPTS=--driver-java-options=-Djava.library.path=$TBB_LIB_PATH" >> $GITHUB_ENV
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyspark==3.4.0 numpy pytest
+      - name: Build Spark NLP
+        run: |
+          brew install sbt
+          sbt -mem 6144 -Dis_spark34=true clean assemblyAndCopy
+      - name: Run Slow Python Tests File-by-File
+        run: |
+          cd python
+          # Get all test files with slow tests
+          TEST_FILES=$(python3.8 -m pytest --collect-only -m slow -q | grep "::" | cut -d':' -f1 | sort -u)
+          
+          TOTAL=$(echo "$TEST_FILES" | wc -l | tr -d ' ')
+          CURRENT=0
+          FAILED=0
+          
+          echo "Found $TOTAL test files to run"
+          
+          for test_file in $TEST_FILES; do
+            CURRENT=$((CURRENT + 1))
+            
+            
+            echo ""
+            echo "=========================================="
+            echo "[$CURRENT/$TOTAL] Running: $test_file"
+            echo "=========================================="
+            
+            # Run each file in its own process
+            if python3.8 -m pytest -v -m slow "$test_file"; then
+              echo "✓ PASSED: $test_file"
+            else
+              echo "✗ FAILED: $test_file"
+              FAILED=$((FAILED + 1))
+              
+              # Clean up cache_pretrained on failure to avoid corruption issues
+              if [ -d "$HOME/cache_pretrained" ]; then
+                echo "Cleaning up cache_pretrained after failure..."
+                rm -rf "$HOME/cache_pretrained"
+              fi
+            fi
+            
+            # Clean up cache_pretrained periodically (every 10 tests) to prevent disk space issues
+            if [ $((CURRENT % 2)) -eq 0 ]; then
+              echo "Periodic cleanup of cache_pretrained..."
+              if [ -d "$HOME/cache_pretrained" ]; then
+                rm -rf "$HOME/cache_pretrained"
+              fi
+            fi
+            
+            # Small delay for cleanup
+            sleep 3
+          done
+          
+          echo ""
+          echo "=========================================="
+          echo "Summary:"
+          echo "  Total: $TOTAL files"
+          echo "  Failed: $FAILED files"
+          echo "  Passed: $((TOTAL - FAILED - SKIPPED)) files"
+          echo "=========================================="
+          
+          # Exit with error if any tests failed (not counting skipped)
+          if [ $FAILED -gt 0 ]; then
+            exit 1
+          fi
