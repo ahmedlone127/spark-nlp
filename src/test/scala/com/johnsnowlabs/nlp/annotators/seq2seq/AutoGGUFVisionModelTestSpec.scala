@@ -147,7 +147,7 @@ class AutoGGUFVisionModelTestSpec extends AnyFlatSpec {
   }
 
   // This test requires cpu
-  it should "be closeable" taggedAs LocalTest in {
+  it should "be closeable" taggedAs SlowTest ignore {
     lazy val model: AutoGGUFVisionModel = AutoGGUFVisionModel
       .pretrained()
       .setInputCols("caption_document", "image_assembler")

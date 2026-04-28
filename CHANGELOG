@@ -1,4 +1,40 @@
 =======
+6.3.2
+=======
+---------------------------
+New Features & Enhancements
+---------------------------
+
+* [SPARKNLP-1136] JSON Serialization for Features #14722
+* [SPARKNLP-1329] Adding image coordinates to metadata for Reader2Image #14725
+* [SPARKNLP-1333] Adding ids input for LightPipeline #14726
+
+---------
+Bug Fixes
+---------
+
+* Fix out of memory error when copying big models to a cloud storage
+
+=======
+6.3.1
+=======
+---------------------------
+New Features & Enhancements
+---------------------------
+
+* [SPARKNLP-1304] Upgrade jsl-llamacpp to llama.cpp b7247 #14719
+* [SPARKNLP-1322] Store Structural Position for Tables and Images #14713
+* [SPARKNLP-1323] Adding instructions to setup MS Frabric on spark-nlp #14710
+
+---------
+Bug Fixes
+---------
+
+* [SPARKNLP-1324] handle nonstandard output tensor names better when loading onnx bert models #14711
+* Bugfix when resetting cache in ResourceDownloader #14712
+* Addition sentence info into DocumentAssembler output in LightPipeline #14714
+
+=======
 6.3.0
 =======
 ---------------------------

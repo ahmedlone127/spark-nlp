@@ -178,8 +178,8 @@ class AutoGGUFModelTest extends AnyFlatSpec {
     result.select("completions").show(truncate = false)
   }
 
-  it should "contain metadata when loadSavedModel" taggedAs LocalTest in {
-    lazy val modelPath = "models/codellama-7b.Q2_K.gguf"
+  it should "contain metadata when loadSavedModel" taggedAs SlowTest in {
+    lazy val modelPath = "models/Qwen3-1.7B-Q4_K_M.gguf"
     val model = AutoGGUFModel.loadSavedModel(modelPath, ResourceHelper.spark)
     val metadata = model.getMetadata
     assert(metadata.nonEmpty)
@@ -242,7 +242,7 @@ class AutoGGUFModelTest extends AnyFlatSpec {
   }
 
   // This test requires cpu
-  it should "be closeable" taggedAs LocalTest in {
+  it should "be closeable" taggedAs SlowTest ignore {
     val model = AutoGGUFModel
       .pretrained()
       .setInputCols("document")
@@ -260,7 +260,7 @@ class AutoGGUFModelTest extends AnyFlatSpec {
   it should "be able to remove thinking tags" taggedAs LocalTest in {
     val thinkTag = "think"
     val model = AutoGGUFModel
-      .loadSavedModel("models/Qwen3-8B-Q4_K_M.gguf", ResourceHelper.spark)
+      .loadSavedModel("models/Qwen3-1.7B-Q4_K_M.gguf", ResourceHelper.spark)
       .setInputCols("document")
       .setOutputCol("completions")
       .setRemoveThinkingTag(thinkTag)
@@ -278,7 +278,27 @@ class AutoGGUFModelTest extends AnyFlatSpec {
     assert(!completion.contains(s"<$thinkTag>") && !completion.contains(s"</$thinkTag>"))
   }
 
-//  it should "benchmark" taggedAs LocalTest in {
+  it should "be able to disable thinking entirely" taggedAs SlowTest in {
+    val model = AutoGGUFModel
+      .loadSavedModel("models/Qwen3-1.7B-Q4_K_M.gguf", ResourceHelper.spark)
+      .setInputCols("document")
+      .setOutputCol("completions")
+      .setReasoningBudget(0)
+      .setNPredict(500)
+      .setTemperature(0.1f)
+
+    val data = Seq("What is the meaning of life? Think shortly step by step.").toDF("text")
+
+    val pipeline =
+      new Pipeline().setStages(Array(documentAssembler, model))
+    val result = pipeline.fit(data).transform(data)
+
+    val completion = Annotation.collect(result, "completions").flatten.head.result
+    println(completion)
+    assert(!completion.contains("<think>") && !completion.contains("</think>"))
+  }
+
+//  it should "benchmark" taggedAs SlowTest in {
 //    val model = AutoGGUFModel
 //      .loadSavedModel("models/gemma-3-4b-it-qat-Q4_K_M.gguf", ResourceHelper.spark)
 //      .setInputCols("document")

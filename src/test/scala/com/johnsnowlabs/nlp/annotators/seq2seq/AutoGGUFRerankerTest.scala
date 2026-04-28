@@ -96,8 +96,7 @@ class AutoGGUFRerankerTest extends AnyFlatSpec {
       .show(truncate = false)
   }
 
-  it should "contain metadata when loadSavedModel" taggedAs LocalTest in {
-    lazy val modelPath = "/tmp/bge_reranker_v2_m3_Q4_K_M.gguf"
+  it should "contain metadata when loadSavedModel" taggedAs SlowTest in {
     val model = AutoGGUFReranker.loadSavedModel(modelPath, ResourceHelper.spark)
     val metadata = model.getMetadata
     assert(metadata.nonEmpty)
