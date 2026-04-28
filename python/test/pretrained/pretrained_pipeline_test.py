@@ -19,23 +19,23 @@ import pytest
 from sparknlp.pretrained import PretrainedPipeline
 
 
-@pytest.mark.local
+@pytest.mark.slow
 class PretrainedPipelineTextInputTest(unittest.TestCase):
 
     def setUp(self):
-        self.pipeline = PretrainedPipeline("clean_slang", "en")
+        self.pipeline = PretrainedPipeline("onto_recognize_entities_bert_tiny", "en")
 
     def runTest(self):
-        slang_text = "yo, what is wrong with ya?"
-        annotations_result = self.pipeline.fullAnnotate(slang_text)
+        text = "John Snow Labs is based in Delaware and builds AI for healthcare"
+        annotations_result = self.pipeline.fullAnnotate(text)
 
         self.assertEqual(len(annotations_result), 1)
         for result in annotations_result:
             self.assertTrue(len(result) > 0)
 
-        slang_texts = [slang_text, slang_text]
-        annotations_result = self.pipeline.fullAnnotate(slang_texts)
-        self.assertEqual(len(annotations_result), len(slang_texts))
+        batch_texts = [text, text]
+        annotations_result = self.pipeline.fullAnnotate(batch_texts)
+        self.assertEqual(len(annotations_result), len(batch_texts))
         for result in annotations_result:
             self.assertTrue(len(result) > 0)
 
@@ -47,7 +47,7 @@ class PretrainedPipelineImageSetUp(unittest.TestCase):
         self.pipeline = PretrainedPipeline("pipeline_image_classifier_vit_dogs", "en")
 
 
-@pytest.mark.local
+@pytest.mark.slow
 class PretrainedPipelineImageInputTest(PretrainedPipelineImageSetUp, unittest.TestCase):
 
     def setUp(self):
@@ -71,7 +71,7 @@ class PretrainedPipelineImageInputTest(PretrainedPipelineImageSetUp, unittest.Te
             self.assertTrue(len(result) > 0)
 
 
-@pytest.mark.local
+@pytest.mark.slow
 class PretrainedPipelineImagesInputTest(PretrainedPipelineImageSetUp, unittest.TestCase):
 
     def setUp(self):
@@ -95,7 +95,7 @@ class PretrainedPipelineImagesInputTest(PretrainedPipelineImageSetUp, unittest.T
             self.assertTrue(len(result) > 0)
 
 
-@pytest.mark.local
+@pytest.mark.slow
 class PretrainedPipelineAudioInputTest(unittest.TestCase):
 
     def setUp(self):
@@ -124,7 +124,7 @@ class PretrainedPipelineAudioInputTest(unittest.TestCase):
             self.assertTrue(len(result) > 0)
 
 
-@pytest.mark.local
+@pytest.mark.slow
 class PretrainedPipelineWithFinisher(unittest.TestCase):
 
     def setUp(self):
