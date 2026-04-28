@@ -22,7 +22,7 @@ import com.johnsnowlabs.nlp.annotators.ner.dl.NerDLApproach.getIteratorFunc
 import com.johnsnowlabs.nlp.embeddings.{BertEmbeddings, WordEmbeddingsModel}
 import com.johnsnowlabs.nlp.training.CoNLL
 import com.johnsnowlabs.nlp.util.io.ResourceHelper
-import com.johnsnowlabs.tags.{FastTest, LocalTest}
+import com.johnsnowlabs.tags.{FastTest, LocalTest, SlowTest}
 import com.johnsnowlabs.util.{Benchmark, FileHelper}
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.{DataFrame, Dataset}

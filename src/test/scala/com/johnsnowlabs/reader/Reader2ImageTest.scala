@@ -19,7 +19,7 @@ import com.johnsnowlabs.nlp.annotators.SparkSessionTest
 import com.johnsnowlabs.nlp.annotators.cv.{Qwen2VLTransformer, SmolVLMTransformer}
 import com.johnsnowlabs.nlp.annotators.seq2seq.AutoGGUFVisionModel
 import com.johnsnowlabs.nlp.{AnnotatorType, AssertAnnotations}
-import com.johnsnowlabs.tags.{FastTest, LocalTest}
+import com.johnsnowlabs.tags.{FastTest, LocalTest, SlowTest}
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.sql.functions.{col, explode}
 import org.scalatest.flatspec.AnyFlatSpec
